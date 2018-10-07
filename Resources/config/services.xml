@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://symfony.com/schema/dic/services
+        http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <parameters>
+        <parameter key="datainfo.client.base_uri">http://sistema.datainfo.inf.br</parameter>
+        <parameter key="datainfo.client.headers.user_agent">launcherApp/1.0-alpha</parameter>
+        <parameter key="datainfo.client.connect_timeout">30</parameter>
+        <parameter key="datainfo.login.cookie_lifetime">3600</parameter>
+    </parameters>
+
+    <services>
+        <!-- Client -->
+        <service id="datainfo.client.middleware.json_response_aware" class="GuzzleHttp\Middleware" public="false">
+            <factory class="GuzzleHttp\Middleware" method="mapResponse" />
+            <argument>Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse::parse</argument>
+        </service>
+
+        <service id="datainfo.client.stack_handler" class="GuzzleHttp\HandlerStack" public="false">
+            <factory class="GuzzleHttp\HandlerStack" method="create" />
+            <call method="push">
+                <argument type="service" id="datainfo.client.middleware.json_response_aware" />
+            </call>
+        </service>
+
+        <service id="datainfo.client.guzzle_http" class="GuzzleHttp\Client" public="false">
+            <argument type="collection">
+                <argument key="cookies">true</argument>
+                <argument key="base_uri">%datainfo.client.base_uri%</argument>
+                <argument key="headers" type="collection">
+                    <argument key="User-Agent">%datainfo.client.headers.user_agent%</argument>
+                </argument>
+                <argument key="connect_timeout">%datainfo.client.connect_timeout%</argument>
+                <argument key="handler" type="service" id="datainfo.client.stack_handler" />
+            </argument>
+        </service>
+
+        <service id="datainfo.client.default" alias="datainfo.client.guzzle_http" public="false" />
+
+        <!-- Cache Adapter -->
+        <service id="datainfo.cache.filesystem" class="Symfony\Component\Cache\Adapter\FilesystemAdapter" public="false" />
+
+        <service id="datainfo.cache.default_adapter" alias="datainfo.cache.filesystem" public="false" />
+
+        <!-- Sistema -->
+        <service id="Hallboav\DatainfoBundle\Sistema\Sistema" public="false" autowire="true">
+            <tag name="monolog.logger" channel="datainfo" />
+
+            <argument>%datainfo.login.cookie_lifetime%</argument>
+            <argument type="service" id="datainfo.client.default" />
+            <argument type="service" id="event_dispatcher" />
+            <argument type="service" id="datainfo.cache.default_adapter" />
+            <argument type="service" id="logger" on-invalid="null" />
+        </service>
+
+        <service id="datainfo.sistema" alias="Hallboav\DatainfoBundle\Sistema\Sistema" public="false" />
+
+        <!-- Controller -->
+        <service id="datainfo.sistema.controller" class="Hallboav\DatainfoBundle\Controller\SistemaController" public="false">
+            <tag name="controller.service_arguments" />
+        </service>
+    </services>
+</container>

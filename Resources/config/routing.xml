@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<routes xmlns="http://symfony.com/schema/routing"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://symfony.com/schema/routing
+        http://symfony.com/schema/routing/routing-1.0.xsd">
+
+    <route
+        id="datainfo_sistema_activities"
+        path="/activities"
+        methods="GET"
+        controller="datainfo.sistema.controller:activities"
+    >
+    </route>
+
+    <route
+        id="datainfo_sistema_balance"
+        path="/balance/{startDate}/{endDate}"
+        methods="GET"
+        controller="datainfo.sistema.controller:balance"
+    >
+    </route>
+
+    <route
+        id="datainfo_sistema_widget_report"
+        path="/widget-report/{startDate}/{endDate}"
+        methods="GET"
+        controller="datainfo.sistema.controller:widgetReport"
+    >
+    </route>
+
+    <route
+        id="datainfo_sistema_launch"
+        path="/launch"
+        methods="POST"
+        controller="datainfo.sistema.controller:launchPerformedTasks"
+    >
+    </route>
+</routes>
