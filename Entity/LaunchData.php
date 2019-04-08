@@ -24,7 +24,7 @@ class LaunchData
      *     fields = {
      *         "date" = @Assert\All(
      *             @Assert\NotBlank(),
-     *             @Assert\Date(format="Y-m-d\T00:00:00P")
+     *             @Assert\DateTime(format="Y-m-d\T00:00:00P")
      *         )
      *     }
      * )
