@@ -13,7 +13,7 @@ class PerformedTaskData
      * @var \DateTimeInterface|null
      *
      * @Assert\NotBlank()
-     * @Assert\Date(format=Y-m-d\T00:00:00P)
+     * @Assert\DateTime(format="Y-m-d\T00:00:00P")
      */
     private $date;
 
@@ -21,7 +21,7 @@ class PerformedTaskData
      * @var \DateTimeInterface|null
      *
      * @Assert\NotBlank()
-     * @Assert\DateTime(format=Y-m-d\TH:i:sP)
+     * @Assert\DateTime(format="Y-m-d\TH:i:sP")
      */
     private $startTime;
 
@@ -29,7 +29,7 @@ class PerformedTaskData
      * @var \DateTimeInterface|null
      *
      * @Assert\NotBlank()
-     * @Assert\DateTime(format=Y-m-d\TH:i:sP)
+     * @Assert\DateTime(format="Y-m-d\TH:i:sP")
      */
     private $endTime;
 
