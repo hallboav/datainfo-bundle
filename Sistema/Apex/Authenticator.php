@@ -46,7 +46,7 @@ class Authenticator
             'p_arg_names=22836724431945509',
             sprintf('p_t01=%s', $user->getDatainfoUsername()),
             'p_arg_names=22836815674945509',
-            sprintf('p_t02=%s', $user->getDatainfoPassword()),
+            sprintf('p_t02=%s', urlencode($user->getDatainfoPassword())),
             sprintf('p_page_checksum=%s', $checksum),
         ];
 
