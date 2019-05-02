@@ -45,7 +45,7 @@ class PerformedTaskData
     /**
      * @var string|null
      *
-     * @Assert\Regex("#[A-Z]+\-\d+#")
+     * @Assert\Regex("#[A-Z]+(\-|\—)\d+#")
      */
     private $ticket;
 
