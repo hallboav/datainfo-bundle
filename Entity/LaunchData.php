@@ -20,14 +20,6 @@ class LaunchData
      * @var array|null
      *
      * @Assert\NotBlank()
-     * @Assert\Collection(
-     *     fields = {
-     *         "date" = @Assert\All(
-     *             @Assert\NotBlank(),
-     *             @Assert\DateTime(format="Y-m-d\T00:00:00P")
-     *         )
-     *     }
-     * )
      */
     private $performedTasks;
 
