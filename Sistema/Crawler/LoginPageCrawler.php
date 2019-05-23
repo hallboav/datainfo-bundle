@@ -15,6 +15,16 @@ class LoginPageCrawler extends AbstractPageCrawler
     const CONNECT_BUTTON_LABEL = 'Conectar';
 
     /**
+     * @var Form
+     */
+    private $form;
+
+    /**
+     * @var Crawler
+     */
+    private $crawler;
+
+    /**
      * {@inheritDoc}
      */
     public function getUri(string $instance): string
@@ -25,43 +35,76 @@ class LoginPageCrawler extends AbstractPageCrawler
     /**
      * Obtém instance (p_instance) obtido na tela de login.
      *
-     * @param string $contents
-     *
      * @return string
      */
-    public function getInstance(string $contents): string
+    public function getInstance(): string
     {
-        $form = $this->getForm($contents);
+        if (null === $this->contents) {
+            $this->crawl();
+        }
 
-        return $form->get('p_instance')->getValue();
+        if (null === $this->form) {
+            $this->form = $this->getForm();
+        }
+
+        return $this->form->get('p_instance')->getValue();
     }
 
     /**
-     * Obtém checksum (p_page_checksum) contido na tela de login.
-     *
-     * @param string $contents
+     * Obtém o salt contido na tela de login.
      *
      * @return string
      */
-    public function getChecksum(string $contents): string
+    public function getSalt(): string
     {
-        $form = $this->getForm($contents);
+        if (null === $this->crawler) {
+            $this->crawler = $this->getCrawler();
+        }
 
-        return $form->get('p_page_checksum')->getValue();
+        return $this->crawler->filter('input#pSalt')->attr('value');
     }
 
     /**
-     * Obtém o formulário através do conteúdo.
+     * Obtém o protected contido na tela de login.
      *
-     * @param string $contents
+     * @return string
+     */
+    public function getProtected(): string
+    {
+        if (null === $this->crawler) {
+            $this->crawler = $this->getCrawler();
+        }
+
+        return $this->crawler->filter('input#pPageItemsProtected')->attr('value');
+    }
+
+    /**
+     * Obtém o formulário.
      *
      * @return Form
      */
-    private function getForm(string $contents): Form
+    private function getForm(): Form
     {
-        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), self::LOGIN_URI);
-        $crawler = new Crawler($contents, $uri);
+        if (null === $this->crawler) {
+            $this->crawler = $this->getCrawler();
+        }
 
-        return $crawler->selectButton(self::CONNECT_BUTTON_LABEL)->form();
+        return $this->crawler->selectButton(self::CONNECT_BUTTON_LABEL)->form();
+    }
+
+    /**
+     * Obtém instância de Crawler.
+     *
+     * @return Crawler
+     */
+    private function getCrawler(): Crawler
+    {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
+        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), self::LOGIN_URI);
+
+        return new Crawler($this->contents, $uri);
     }
 }

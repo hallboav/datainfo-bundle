@@ -59,18 +59,18 @@ class Sistema
     /**
      * Construtor.
      *
-     * @param int                      $loginCookieLifetime
      * @param ClientInterface          $client
      * @param EventDispatcherInterface $dispatcher
      * @param AdapterInterface         $cache
+     * @param int                      $loginCookieLifetime
      * @param LoggerInterface          $logger
      */
-    public function __construct(int $loginCookieLifetime, ClientInterface $client, EventDispatcherInterface $dispatcher, AdapterInterface $cache, LoggerInterface $logger = null)
+    public function __construct(ClientInterface $client, EventDispatcherInterface $dispatcher, AdapterInterface $cache, int $loginCookieLifetime, LoggerInterface $logger = null)
     {
-        $this->loginCookieLifetime = $loginCookieLifetime;
         $this->client = $client;
         $this->dispatcher = $dispatcher;
         $this->cache = $cache;
+        $this->loginCookieLifetime = $loginCookieLifetime;
         $this->logger = $logger;
     }
 
@@ -272,12 +272,12 @@ class Sistema
 
         $cacheKey = sprintf('cache.crawler.login.%s', $user->getDatainfoUsername());
         $loginPageCrawler = new LoginPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $contents = $loginPageCrawler->crawl('not_used');
         $this->instance = $loginPageCrawler->getInstance($contents);
-        $checksum = $loginPageCrawler->getChecksum($contents);
+        $salt = $loginPageCrawler->getSalt();
+        $protected = $loginPageCrawler->getProtected();
 
         $authenticator = new Authenticator($this->client);
-        $authenticator->authenticate($this->instance, $checksum, $user);
+        $authenticator->authenticate($user, $this->instance, $salt, $protected);
 
         // Lendo os cookies no client
         $jar = $this->client->getConfig('cookies');

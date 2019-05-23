@@ -30,29 +30,35 @@ class Authenticator
      *
      * Se tudo ocorrer bem, os cookies estarão salvos no $client.
      *
-     * @param string $instance p_instance.
-     * @param string $checksum p_page_checksum.
+     * @param DatainfoUserInterface $user
+     * @param string                $instance  p_instance.
+     * @param string                $salt
+     * @param string                $protected
      *
      * @return void
      *
      * @throws \InvalidArgumentException Quando o usuário e/ou a senha estão incorretos.
      */
-    public function authenticate(string $instance, string $checksum, DatainfoUserInterface $user): void
+    public function authenticate(DatainfoUserInterface $user, string $instance, string $salt, string $protected): void
     {
         $parameters = [
-            'p_flow_id=104',
-            'p_flow_step_id=101',
-            sprintf('p_instance=%s', $instance),
-            'p_arg_names=22836724431945509',
-            sprintf('p_t01=%s', $user->getDatainfoUsername()),
-            'p_arg_names=22836815674945509',
-            sprintf('p_t02=%s', urlencode($user->getDatainfoPassword())),
-            sprintf('p_page_checksum=%s', $checksum),
+            'p_json' => json_encode([
+                'salt' => $salt,
+                'pageItems' => [
+                    'itemsToSubmit' => [
+                        ['n' => 'P101_USERNAME', 'v' => $user->getDatainfoUsername()],
+                        ['n' => 'P101_PASSWORD', 'v' => $user->getDatainfoPassword()],
+                    ],
+                    'protected' => $protected,
+                ]
+            ]),
+            'p_flow_id' => '104',
+            'p_flow_step_id' => '101',
+            'p_instance' => $instance,
         ];
 
         $response = $this->client->post('/apex/wwv_flow.accept', [
-            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-            'body' => implode('&', $parameters),
+            'form_params' => $parameters,
             'allow_redirects' => [
                 'max' => 1,
             ],

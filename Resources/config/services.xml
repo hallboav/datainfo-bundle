@@ -48,10 +48,10 @@
         <service id="Hallboav\DatainfoBundle\Sistema\Sistema" public="false" autowire="true">
             <tag name="monolog.logger" channel="datainfo" />
 
-            <argument>%datainfo.login.cookie_lifetime%</argument>
             <argument type="service" id="datainfo.client.default" />
             <argument type="service" id="event_dispatcher" />
             <argument type="service" id="datainfo.cache.default_adapter" />
+            <argument>%datainfo.login.cookie_lifetime%</argument>
             <argument type="service" id="logger" on-invalid="null" />
         </service>
 

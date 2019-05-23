@@ -21,6 +21,11 @@ abstract class AbstractPageCrawler
     protected $cache;
 
     /**
+     * @var string
+     */
+    protected $contents;
+
+    /**
      * Construtor.
      *
      * @param ClientInterface  $client
@@ -41,9 +46,9 @@ abstract class AbstractPageCrawler
      *
      * @param string $instance p_instance.
      *
-     * @return string Conteúdo HTML da página.
+     * @return self
      */
-    public function crawl(string $instance): string
+    public function crawl(string $instance = ''): self
     {
         $pageContents = $this->cache->getItem($this->cacheKey);
 
@@ -53,13 +58,13 @@ abstract class AbstractPageCrawler
 
         $uri = $this->getUri($instance);
         $response = $this->client->get($uri);
-        $contents = $response->getBody()->getContents();
+        $this->contents = $response->getBody()->getContents();
 
-        $pageContents->set($contents);
+        $pageContents->set($this->contents);
         $pageContents->expiresAfter($this->loginCookieLifetime);
         $this->cache->save($pageContents);
 
-        return $contents;
+        return $this;
     }
 
     /**
