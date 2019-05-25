@@ -5,6 +5,7 @@ namespace Hallboav\DatainfoBundle\Sistema\Apex;
 use GuzzleHttp\ClientInterface;
 use Hallboav\DatainfoBundle\Sistema\Activity\Project;
 use Hallboav\DatainfoBundle\Sistema\Activity\Activity;
+use Hallboav\DatainfoBundle\Sistema\Activity\ActivityCollection;
 use Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse;
 
 /**
@@ -30,30 +31,39 @@ class ActivityLoader
     /**
      * Carrega as atividades.
      *
+     * @param Project $project
      * @param string  $instance
      * @param string  $ajaxId
-     * @param Project $project
+     * @param string  $salt
+     * @param string  $protected
      *
-     * @return array
+     * @return ActivityCollection
      *
      * @throws \UnexpectedValueException Quando a resposta não está no tipo application/json.
      * @throws \UnexpectedValueException Quando a resposta do Service é insuficiente para ler as atividades.
      * @throws \UnexpectedValueException Quando a resposta do Service é insuficiente para ler a atividade.
      */
-    public function load(string $instance, string $ajaxId, Project $project): array
+    public function load(Project $project, string $instance, string $ajaxId, string $salt, string $protected): ActivityCollection
     {
         $parameters = [
-            sprintf('p_request=PLUGIN=%s', $ajaxId),
-            'p_flow_id=104',
-            'p_flow_step_id=100',
-            sprintf('p_instance=%s', $instance),
-            'p_arg_names=P100_PROJETOUSUARIO',
-            sprintf('p_arg_values=%s', $project->getId()),
+            'p_flow_id' => '104',
+            'p_flow_step_id' => '101',
+            'p_instance' => $instance,
+            'p_request' => sprintf('PLUGIN=%s', urlencode($ajaxId)),
+            'p_json' => json_encode([
+                'salt' => $salt,
+                'pageItems' => [
+                    'itemsToSubmit' => [
+                        ['n' => 'P100_SEQ_ESFORCO',    'v' => ''],
+                        ['n' => 'P100_PROJETOUSUARIO', 'v' => $project->getId()],
+                    ],
+                    'protected' => $protected,
+                ],
+            ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.show', [
-            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-            'body' => implode('&', $parameters),
+        $response = $this->client->post('/apex/wwv_flow.ajax', [
+            'form_params' => $parameters,
         ]);
 
         if (!($response instanceof JsonResponse)) {
@@ -66,17 +76,20 @@ class ActivityLoader
             throw new \UnexpectedValueException('A resposta do Service é insuficiente para ler as atividades.');
         }
 
-        $activities = [];
+        $activities = new ActivityCollection();
+
         foreach ($json['values'] as $value) {
             if (!isset($value['d'], $value['r'])) {
                 throw new \UnexpectedValueException('A resposta do Service é insuficiente para ler a atividade.');
             }
 
-            $activities[] = new Activity(
+            $activity = new Activity(
                 $value['r'],
                 html_entity_decode($value['d'], ENT_QUOTES, 'UTF-8'),
                 $project
             );
+
+            $activities->add($activity);
         }
 
         return $activities;

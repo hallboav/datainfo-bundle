@@ -42,6 +42,9 @@ class Authenticator
     public function authenticate(DatainfoUserInterface $user, string $instance, string $salt, string $protected): void
     {
         $parameters = [
+            'p_flow_id' => '104',
+            'p_flow_step_id' => '101',
+            'p_instance' => $instance,
             'p_json' => json_encode([
                 'salt' => $salt,
                 'pageItems' => [
@@ -50,11 +53,8 @@ class Authenticator
                         ['n' => 'P101_PASSWORD', 'v' => $user->getDatainfoPassword()],
                     ],
                     'protected' => $protected,
-                ]
+                ],
             ]),
-            'p_flow_id' => '104',
-            'p_flow_step_id' => '101',
-            'p_instance' => $instance,
         ];
 
         $response = $this->client->post('/apex/wwv_flow.accept', [

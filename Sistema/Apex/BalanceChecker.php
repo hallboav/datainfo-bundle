@@ -61,7 +61,6 @@ class BalanceChecker
                         // ['n' => 'P10_W_TIP_ESFORCO', 'v' => ''],
                     ],
                     'protected' => $protected,
-                    // 'rowVersion' => $rowVersion,
                 ],
             ]),
         ];

@@ -31,34 +31,40 @@ class TaskDeleter
      * Exclui um registro de ponto.
      *
      * @param DatainfoUserInterface $user
+     * @param Task                  $task
+     * @param string                $performedTaskId
      * @param string                $instance
      * @param string                $ajaxId
-     * @param string                $performedTaskId
-     * @param Task                  $task
+     * @param string                $salt
+     * @param string                $protected
      *
      * @return string
      *
      * @throws \UnexpectedValueException Quando a resposta não está no tipo application/json.
      * @throws \DomainException          Quando o Service não exclui o ponto e também não retorna nenhum erro.
      */
-    public function delete(DatainfoUserInterface $user, string $instance, string $ajaxId, string $performedTaskId, Task $task): string
+    public function deleteTask(DatainfoUserInterface $user, Task $task, string $performedTaskId, string $instance, string $ajaxId, string $salt, string $protected): string
     {
         $parameters = [
-            sprintf('p_request=PLUGIN=%s', $ajaxId),
-            'p_flow_id=104',
-            'p_flow_step_id=100',
-            sprintf('p_instance=%s', $instance),
-            'p_arg_names=P100_NUMSEQESFORCO',
-            sprintf('p_arg_values=%s', $performedTaskId),
-            'p_arg_names=P100_F_APEX_USER',
-            sprintf('p_arg_values=%s', strtoupper($user->getDatainfoUsername())),
-            'p_arg_names=P100_DATAESFORCO',
-            sprintf('p_arg_values=%s', $task->getDate()->format('d/m/Y')),
+            'p_flow_id' => '104',
+            'p_flow_step_id' => '100',
+            'p_instance' => $instance,
+            'p_request' => sprintf('PLUGIN=%s', urlencode($ajaxId)),
+            'p_json' => json_encode([
+                'salt' => $salt,
+                'pageItems' => [
+                    'itemsToSubmit' => [
+                        ['n' => 'P100_NUMSEQESFORCO', 'v' => $performedTaskId],
+                        ['n' => 'P100_F_APEX_USER',   'v' => strtoupper($user->getDatainfoUsername())],
+                        ['n' => 'P100_DATAESFORCO',   'v' => $task->getDate()->format('d/m/Y')],
+                    ],
+                    'protected' => $protected,
+                ],
+            ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.show', [
-            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-            'body' => implode('&', $parameters),
+        $response = $this->client->post('/apex/wwv_flow.ajax', [
+            'form_params' => $parameters,
         ]);
 
         if (!($response instanceof JsonResponse)) {

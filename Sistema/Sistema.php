@@ -3,32 +3,35 @@
 namespace Hallboav\DatainfoBundle\Sistema;
 
 use GuzzleHttp\Client;
-use Psr\Log\LoggerInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Cookie\SetCookie;
-use Hallboav\DatainfoBundle\Event\DatainfoEvents;
-use Hallboav\DatainfoBundle\Sistema\Apex\Launcher;
-use Hallboav\DatainfoBundle\Sistema\Balance\Balance;
-use Hallboav\DatainfoBundle\Sistema\Activity\Project;
-use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Hallboav\DatainfoBundle\Event\AuthenticationEvent;
+use Hallboav\DatainfoBundle\Event\DatainfoEvents;
 use Hallboav\DatainfoBundle\Sistema\Activity\Activity;
-use Hallboav\DatainfoBundle\Sistema\Effort\EffortType;
-use Hallboav\DatainfoBundle\Sistema\Apex\Authenticator;
+use Hallboav\DatainfoBundle\Sistema\Activity\ActivityCollection;
+use Hallboav\DatainfoBundle\Sistema\Activity\Project;
+use Hallboav\DatainfoBundle\Sistema\Activity\ProjectCollection;
 use Hallboav\DatainfoBundle\Sistema\Apex\ActivityLoader;
+use Hallboav\DatainfoBundle\Sistema\Apex\Authenticator;
 use Hallboav\DatainfoBundle\Sistema\Apex\BalanceChecker;
+use Hallboav\DatainfoBundle\Sistema\Apex\Launcher;
 use Hallboav\DatainfoBundle\Sistema\Apex\WidgetReporter;
+use Hallboav\DatainfoBundle\Sistema\Balance\Balance;
+use Hallboav\DatainfoBundle\Sistema\Crawler\LauncherPageCrawler;
 use Hallboav\DatainfoBundle\Sistema\Crawler\LoginPageCrawler;
 use Hallboav\DatainfoBundle\Sistema\Crawler\QueryPageCrawler;
+use Hallboav\DatainfoBundle\Sistema\Effort\EffortType;
 use Hallboav\DatainfoBundle\Sistema\Effort\FilteringEffortType;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
-use Hallboav\DatainfoBundle\Sistema\Crawler\LauncherPageCrawler;
+use Hallboav\DatainfoBundle\Sistema\Task\TaskCollection;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Cache\Adapter\AdapterInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
  */
-class Sistema
+final class Sistema
 {
     /**
      * @var ClientInterface
@@ -78,9 +81,9 @@ class Sistema
      *
      * @param DatainfoUserInterface $user
      *
-     * @return array
+     * @return ProjectCollection
      */
-    public function getProjects(DatainfoUserInterface $user): array
+    public function getProjects(DatainfoUserInterface $user): ProjectCollection
     {
         $this->authenticate($user);
 
@@ -102,9 +105,9 @@ class Sistema
      * @param DatainfoUserInterface $user
      * @param Project               $project
      *
-     * @return array
+     * @return ActivityCollection
      */
-    public function getActivities(DatainfoUserInterface $user, Project $project): array
+    public function getActivities(DatainfoUserInterface $user, Project $project): ActivityCollection
     {
         $this->authenticate($user);
 
@@ -117,11 +120,13 @@ class Sistema
 
         $cacheKey = sprintf('cache.crawler.activity.%s', $user->getDatainfoUsername());
         $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $salt = $launcherPageCrawler->getSalt();
+        $protected = $launcherPageCrawler->getProtected();
         $ajaxId = $launcherPageCrawler->getAjaxIdForActivitiesFetching();
 
         $activityLoader = new ActivityLoader($this->client);
 
-        return $activityLoader->load($this->instance, $ajaxId, $project);
+        return $activityLoader->load($project, $this->instance, $ajaxId, $salt, $protected);
     }
 
     /**
@@ -189,13 +194,13 @@ class Sistema
      *
      * @param DatainfoUserInterface $user
      * @param Activity              $activity   Atividade executada nas tarefas.
-     * @param array                 $tasks      Uma coleção de tarefas, cada tarefa contém data, hora inicial,
+     * @param TaskCollection        $tasks      Uma coleção de tarefas, cada tarefa contém data, hora inicial,
      *                                          hora final, ticket e descrição.
      * @param EffortType            $effortType Tipo de esforço.
      *
      * @return array Mensagens com resultado de cada lançamento.
      */
-    public function launchPerformedTasks(DatainfoUserInterface $user, Activity $activity, array $tasks, EffortType $effortType): array
+    public function launchPerformedTasks(DatainfoUserInterface $user, Activity $activity, TaskCollection $tasks, EffortType $effortType): array
     {
         $this->authenticate($user);
 
@@ -211,31 +216,39 @@ class Sistema
         $cacheKey = sprintf('cache.crawler.launcher.%s', $user->getDatainfoUsername());
         $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
         $ajaxId = $launcherPageCrawler->getAjaxIdForLaunching();
+        $salt = $launcherPageCrawler->getSalt();
+        $protected = $launcherPageCrawler->getProtected();
 
         $launcher = new Launcher($this->client);
 
         $messages = [];
         foreach ($tasks as $task) {
+            $message = $launcher->launch($user, $task, $activity, $effortType, $this->instance, $ajaxId, $salt, $protected);
+
             $messages[] = [
                 'date' => $task->getDate()->format(\DateTime::ATOM),
                 'start_time' => $task->getStartTime()->format(\DateTime::ATOM),
                 'end_time' => $task->getEndTime()->format(\DateTime::ATOM),
-                'message' => $launcher->launch($user, $this->instance, $ajaxId, $task, $activity, $effortType),
+                'message' => $message,
             ];
         }
 
         return $messages;
     }
 
-    public function deleteTask(DatainfoUserInterface $user)
+    public function deleteTask(DatainfoUserInterface $user): string
     {
-        $this->authenticate($user);
+        // $this->authenticate($user);
 
-        $cacheKey = 'foo';
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $ajaxId = $launcherPageCrawler->getAjaxIdForFoo();
+        // $cacheKey = 'foo';
+        // $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        // $ajaxId = $launcherPageCrawler->getAjaxIdForTaskDeleting();
+        // $salt = $launcherPageCrawler->getSalt();
+        // $protected = $launcherPageCrawler->getProtected();
 
-        // $user, string $instance, string $ajaxId, string $performedTaskId, Task $task
+        // $taskDeleter = new TaskDeleter($this->client);
+
+        // return $taskDeleter->deleteTask($user, $task, $performedTaskId, $this->instance, $ajaxId, $salt, $protected);
     }
 
     /**

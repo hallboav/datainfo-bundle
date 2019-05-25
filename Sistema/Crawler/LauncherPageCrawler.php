@@ -4,6 +4,7 @@ namespace Hallboav\DatainfoBundle\Sistema\Crawler;
 
 use Symfony\Component\DomCrawler\Crawler;
 use Hallboav\DatainfoBundle\Sistema\Activity\Project;
+use Hallboav\DatainfoBundle\Sistema\Activity\ProjectCollection;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -19,6 +20,14 @@ class LauncherPageCrawler extends AbstractPageCrawler
     }
 
     /**
+     * {@inheritDoc}
+     */
+    protected function getFormButtonText(): string
+    {
+        return 'Salvar';
+    }
+
+    /**
      * Obtém o ajaxId usado para obter as atividades.
      *
      * @return string
@@ -29,7 +38,7 @@ class LauncherPageCrawler extends AbstractPageCrawler
             $this->crawl();
         }
 
-        $leftRegExp = '\#P100_SEQ_ESFORCO\"\,';
+        $leftRegExp = '\#P100_SEQ_ESFORCO"\,';
 
         return $this->getAjaxId($this->contents, $leftRegExp, '');
     }
@@ -45,7 +54,18 @@ class LauncherPageCrawler extends AbstractPageCrawler
             $this->crawl();
         }
 
-        $rightRegExp = '\,\"attribute01\"\:\".*P100_DATAESFORCO\,\#P100_DESCRICAO';
+        $rightRegExp = '\,"attribute01":".*P100_DATAESFORCO\,\#P100_DESCRICAO';
+
+        return $this->getAjaxId($this->contents, '', $rightRegExp);
+    }
+
+    public function getAjaxIdForTaskDeleting(): string
+    {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
+        $rightRegExp = '\,"attribute01":".*P100_DATAESFORCO\,\#P100_DESCRICAO';
 
         return $this->getAjaxId($this->contents, '', $rightRegExp);
     }
@@ -53,22 +73,21 @@ class LauncherPageCrawler extends AbstractPageCrawler
     /**
      * Obtém os projetos.
      *
-     * @param string $contents
-     *
-     * @return array
+     * @return ProjectCollection
      */
-    public function getProjects(): array
+    public function getProjects(): ProjectCollection
     {
         if (null === $this->contents) {
             $this->crawl();
         }
 
-        $options = [];
+        $projects = new ProjectCollection();
+
         $crawler = new Crawler($this->contents);
-        $crawler->filter('#P100_PROJETOUSUARIO option:not([value=""])')->each(function (Crawler $option) use (&$options) {
-            $options[] = new Project($option->attr('value'), $option->text());
+        $crawler->filter('#P100_PROJETOUSUARIO option:not([value=""])')->each(function (Crawler $option) use ($projects) {
+            $projects->add(new Project($option->attr('value'), $option->text()));
         });
 
-        return $options;
+        return $projects;
     }
 }

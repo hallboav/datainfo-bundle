@@ -4,6 +4,8 @@ namespace Hallboav\DatainfoBundle\Sistema\Crawler;
 
 use GuzzleHttp\ClientInterface;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
+use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\DomCrawler\Form;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -31,6 +33,16 @@ abstract class AbstractPageCrawler
     protected $contents;
 
     /**
+     * @var Form
+     */
+    protected $form;
+
+    /**
+     * @var Crawler
+     */
+    protected $crawler;
+
+    /**
      * Construtor.
      *
      * @param ClientInterface  $client
@@ -47,6 +59,24 @@ abstract class AbstractPageCrawler
         $this->cacheKey = $cacheKey;
         $this->loginCookieLifetime = $loginCookieLifetime;
     }
+
+    /**
+     * Obtém o URI.
+     *
+     * URI onde está a página para fazer o crawling.
+     *
+     * @return string URI.
+     */
+    abstract protected function getUri(): string;
+
+    /**
+     * Obtém o texto do botão do formulário.
+     *
+     * Usado para obter pSalt, pPageItemsProtected, etc.
+     *
+     * @return string
+     */
+    abstract protected function getFormButtonText(): string;
 
     /**
      * Obtém o conteúdo HTML da página.
@@ -75,13 +105,32 @@ abstract class AbstractPageCrawler
     }
 
     /**
-     * Obtém o URI.
+     * Obtém o salt contido na tela de login.
      *
-     * URI onde está a página para fazer o crawling.
-     *
-     * @return string URI.
+     * @return string
      */
-    abstract protected function getUri(): string;
+    public function getSalt(): string
+    {
+        if (null === $this->crawler) {
+            $this->crawler = $this->getCrawler();
+        }
+
+        return $this->crawler->filter('input#pSalt')->attr('value');
+    }
+
+    /**
+     * Obtém o protected contido na tela de login.
+     *
+     * @return string
+     */
+    public function getProtected(): string
+    {
+        if (null === $this->crawler) {
+            $this->crawler = $this->getCrawler();
+        }
+
+        return $this->crawler->filter('input#pPageItemsProtected')->attr('value');
+    }
 
     /**
      * Obtém o ajaxId.
@@ -101,6 +150,36 @@ abstract class AbstractPageCrawler
         }
 
         return $ajaxId;
+    }
+
+    /**
+     * Obtém o formulário.
+     *
+     * @return Form
+     */
+    protected function getForm(): Form
+    {
+        if (null === $this->crawler) {
+            $this->crawler = $this->getCrawler();
+        }
+
+        return $this->crawler->selectButton($this->getFormButtonText())->form();
+    }
+
+    /**
+     * Obtém instância de Crawler.
+     *
+     * @return Crawler
+     */
+    protected function getCrawler(): Crawler
+    {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
+        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), $this->getUri());
+
+        return new Crawler($this->contents, $uri);
     }
 
     /**

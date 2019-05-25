@@ -2,32 +2,25 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Crawler;
 
-use Symfony\Component\DomCrawler\Crawler;
-use Symfony\Component\DomCrawler\Form;
-
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
  */
 class LoginPageCrawler extends AbstractPageCrawler
 {
-    const CONNECT_BUTTON_LABEL = 'Conectar';
-
-    /**
-     * @var Form
-     */
-    private $form;
-
-    /**
-     * @var Crawler
-     */
-    private $crawler;
-
     /**
      * {@inheritDoc}
      */
     public function getUri(): string
     {
         return '/apex/f?p=104:LOGIN';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getFormButtonText(): string
+    {
+        return 'Conectar';
     }
 
     /**
@@ -42,63 +35,5 @@ class LoginPageCrawler extends AbstractPageCrawler
         }
 
         return $this->form->get('p_instance')->getValue();
-    }
-
-    /**
-     * Obtém o salt contido na tela de login.
-     *
-     * @return string
-     */
-    public function getSalt(): string
-    {
-        if (null === $this->crawler) {
-            $this->crawler = $this->getCrawler();
-        }
-
-        return $this->crawler->filter('input#pSalt')->attr('value');
-    }
-
-    /**
-     * Obtém o protected contido na tela de login.
-     *
-     * @return string
-     */
-    public function getProtected(): string
-    {
-        if (null === $this->crawler) {
-            $this->crawler = $this->getCrawler();
-        }
-
-        return $this->crawler->filter('input#pPageItemsProtected')->attr('value');
-    }
-
-    /**
-     * Obtém o formulário.
-     *
-     * @return Form
-     */
-    private function getForm(): Form
-    {
-        if (null === $this->crawler) {
-            $this->crawler = $this->getCrawler();
-        }
-
-        return $this->crawler->selectButton(self::CONNECT_BUTTON_LABEL)->form();
-    }
-
-    /**
-     * Obtém instância de Crawler.
-     *
-     * @return Crawler
-     */
-    private function getCrawler(): Crawler
-    {
-        if (null === $this->contents) {
-            $this->crawl();
-        }
-
-        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), $this->getUri());
-
-        return new Crawler($this->contents, $uri);
     }
 }

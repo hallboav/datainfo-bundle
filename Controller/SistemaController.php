@@ -10,6 +10,7 @@ use Hallboav\DatainfoBundle\Sistema\Effort\EffortType;
 use Hallboav\DatainfoBundle\Sistema\Effort\FilteringEffortType;
 use Hallboav\DatainfoBundle\Sistema\Sistema;
 use Hallboav\DatainfoBundle\Sistema\Task\Task;
+use Hallboav\DatainfoBundle\Sistema\Task\TaskCollection;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -113,19 +114,21 @@ class SistemaController extends AbstractController
                 throw new UnprocessableEntityHttpException(sprintf('O atividade "%s" não é atividade do usuário logado', $activityId));
             }
 
-            $tasks = [];
+            $tasks = new TaskCollection();
             foreach ($data->getPerformedTasks() as $taskData) {
-                $tasks[] = new Task(
+                $task = new Task(
                     $taskData->getDate(),
                     $taskData->getStartTime(),
                     $taskData->getEndTime(),
                     $taskData->getDescription(),
                     $taskData->getTicket()
                 );
+
+                $tasks->add($task);
             }
 
-            $efforType = new EffortType('normal');
-            $messages = $sistema->launchPerformedTasks($this->getUser(), $activity, $tasks, $efforType);
+            $effortType = new EffortType('normal');
+            $messages = $sistema->launchPerformedTasks($this->getUser(), $activity, $tasks, $effortType);
 
             return $this->json([
                 'messages' => $messages,

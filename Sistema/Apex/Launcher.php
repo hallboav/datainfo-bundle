@@ -3,13 +3,13 @@
 namespace Hallboav\DatainfoBundle\Sistema\Apex;
 
 use GuzzleHttp\ClientInterface;
-use Symfony\Component\Validator\Validation;
-use Hallboav\DatainfoBundle\Sistema\Task\Task;
-use Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse;
 use Hallboav\DatainfoBundle\Sistema\Activity\Activity;
+use Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse;
 use Hallboav\DatainfoBundle\Sistema\Effort\EffortType;
-use Symfony\Component\Validator\Constraints as Assert;
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
+use Hallboav\DatainfoBundle\Sistema\Task\Task;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Validation;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -37,55 +37,51 @@ class Launcher
      * A porcentagem sempre será 99%.
      *
      * @param DatainfoUserInterface $user       Usuário da Datainfo.
-     * @param string                $instance   p_instance.
-     * @param string                $ajaxId     ajaxIdentifier.
      * @param Task                  $task       Tarefa contendo data, hora inicial, hora final, ticket e descrição.
      * @param Activity              $activity   Execução da sprint, planejamento da sprint, etc.
      * @param EffortType            $effortType Normal, extra, viagem, etc.
+     * @param string                $instance   p_instance.
+     * @param string                $ajaxId     ajaxIdentifier.
+     * @param string                $salt
+     * @param string                $protected
      *
      * @return string Mensagem.
      *
      * @throws \UnexpectedValueException Quando a resposta não está no tipo application/json.
      * @throws \DomainException          Quando o Service não lança o ponto e também não retorna nenhum erro.
      */
-    public function launch(DatainfoUserInterface $user, string $instance, string $ajaxId, Task $task, Activity $activity, EffortType $effortType): string
+    public function launch(DatainfoUserInterface $user, Task $task, Activity $activity, EffortType $effortType, string $instance, string $ajaxId, string $salt, string $protected): string
     {
         $parameters = [
-            sprintf('p_request=PLUGIN=%s', $ajaxId),
-            'p_flow_id=104',
-            'p_flow_step_id=100',
-            sprintf('p_instance=%s', $instance),
-            'p_arg_names=P100_F_APEX_USER',
-            sprintf('p_arg_values=%s', strtoupper($user->getDatainfoUsername())),
-            'p_arg_names=P100_PERMISSAO',
-            'p_arg_values=S',
-            'p_arg_names=P100_DATAESFORCO',
-            sprintf('p_arg_values=%s', $task->getDate()->format('d/m/Y')),
-            'p_arg_names=P100_DESCRICAO',
-            sprintf('p_arg_values=%s', $task->getDescription()),
-            'p_arg_names=P100_HORINICIO',
-            sprintf('p_arg_values=%s', $task->getStartTime()->format('H:i')),
-            'p_arg_names=P100_HORFIM',
-            sprintf('p_arg_values=%s', $task->getEndTime()->format('H:i')),
-            'p_arg_names=P100_CHAMADO',
-            sprintf('p_arg_values=%s', $task->getTicket()),
-            'p_arg_names=P100_PROJETOUSUARIO',
-            sprintf('p_arg_values=%s', $activity->getProject()->getId()),
-            'p_arg_names=P100_SEQORDEMSERVICO',
-            sprintf('p_arg_values=%s', $activity->getId()),
-            'p_arg_names=P100_TIPOESFORCO',
-            sprintf('p_arg_values=%s', $effortType->getId()),
-            'p_arg_names=P100_PERCONCLUSAO',
-            'p_arg_values=99',
-            'p_arg_names=P100_DIAFUTURO',
-            'p_arg_values=N',
-            'p_arg_names=P100_TIP_ORDEM_SERVICO',
-            'p_arg_values=1',
+            'p_flow_id' => '104',
+            'p_flow_step_id' => '100',
+            'p_instance' => $instance,
+            'p_request' => sprintf('PLUGIN=%s', urlencode($ajaxId)),
+            'p_json' => json_encode([
+                'salt' => $salt,
+                'pageItems' => [
+                    'itemsToSubmit' => [
+                        ['n' => 'P100_F_APEX_USER',       'v' => strtoupper($user->getDatainfoUsername())],
+                        ['n' => 'P100_DATAESFORCO',       'v' => $task->getDate()->format('d/m/Y')],
+                        ['n' => 'P100_DESCRICAO',         'v' => $task->getDescription()],
+                        ['n' => 'P100_PROJETOUSUARIO',    'v' => $activity->getProject()->getId()],
+                        ['n' => 'P100_SEQORDEMSERVICO',   'v' => $activity->getId()],
+                        ['n' => 'P100_HORINICIO',         'v' => $task->getStartTime()->format('H:i')],
+                        ['n' => 'P100_HORFIM',            'v' => $task->getEndTime()->format('H:i')],
+                        ['n' => 'P100_TIPOESFORCO',       'v' => $effortType->getId()],
+                        ['n' => 'P100_CHAMADO',           'v' => $task->getTicket()],
+                        ['n' => 'P100_PERCONCLUSAO',      'v' => '99'],
+                        ['n' => 'P100_DIAFUTURO',         'v' => 'N'],
+                        ['n' => 'P100_PERMISSAO',         'v' => 'S'],
+                        ['n' => 'P100_TIP_ORDEM_SERVICO', 'v' => '1'],
+                    ],
+                    'protected' => $protected,
+                ],
+            ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.show', [
-            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-            'body' => implode('&', $parameters),
+        $response = $this->client->post('/apex/wwv_flow.ajax', [
+            'form_params' => $parameters,
         ]);
 
         if (!($response instanceof JsonResponse)) {
@@ -101,16 +97,17 @@ class Launcher
             return (string) $violations;
         }
 
-        // Se tiver MSG
-        if ('' !== $json['item'][1]['value']) {
-            return $json['item'][1]['value'];
-        }
-
-        // Se tiver SYSMSG
-        if ('' !== $json['item'][0]['value']) {
+        // Se tiver P100_SYSMSG
+        if (isset($json['item'][0]['value']) && '' !== $json['item'][0]['value']) {
             return $json['item'][0]['value'];
         }
 
+        // Se tiver P100_MSG
+        if (isset($json['item'][1]['value']) && '' !== $json['item'][1]['value']) {
+            return $json['item'][1]['value'];
+        }
+
+        // P100_SALVOU
         if ('TRUE' === $json['item'][2]['value']) {
             return 'OK';
         }
@@ -128,18 +125,27 @@ class Launcher
         return new Assert\Collection([
             'item' => new Assert\Collection([
                 0 => new Assert\Collection([
-                    'id' => new Assert\IdenticalTo('P100_SYSMSG'),
-                    'value' => new Assert\Type('string'),
+                    'allowMissingFields' => true,
+                    'fields' => [
+                        'id' => new Assert\IdenticalTo('P100_SYSMSG'),
+                        'value' => new Assert\Type('string'),
+                    ],
                 ]),
                 1 => new Assert\Collection([
-                    'id' => new Assert\IdenticalTo('P100_MSG'),
-                    'value' => new Assert\Type('string'),
+                    'allowMissingFields' => true,
+                    'fields' => [
+                        'id' => new Assert\IdenticalTo('P100_MSG'),
+                        'value' => new Assert\Type('string'),
+                    ],
                 ]),
                 2 => new Assert\Collection([
-                    'id' => new Assert\IdenticalTo('P100_SALVOU'),
-                    'value' => [
-                        new Assert\Type('string'),
-                        new Assert\Choice(['TRUE', 'FALSE', '']),
+                    'allowMissingFields' => true,
+                    'fields' => [
+                        'id' => new Assert\IdenticalTo('P100_SALVOU'),
+                        'value' => [
+                            new Assert\Type('string'),
+                            new Assert\Choice(['TRUE', 'FALSE', '']),
+                        ],
                     ],
                 ]),
             ]),
