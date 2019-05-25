@@ -16,6 +16,11 @@ abstract class AbstractPageCrawler
     protected $client;
 
     /**
+     * @var string
+     */
+    protected $instance;
+
+    /**
      * @var AdapterInterface
      */
     protected $cache;
@@ -29,13 +34,15 @@ abstract class AbstractPageCrawler
      * Construtor.
      *
      * @param ClientInterface  $client
+     * @param string           $instance            p_instance.
      * @param AdapterInterface $cache
      * @param string           $cacheKey
      * @param int              $loginCookieLifetime
      */
-    public function __construct(ClientInterface $client, AdapterInterface $cache, string $cacheKey, int $loginCookieLifetime)
+    public function __construct(ClientInterface $client, string $instance, AdapterInterface $cache, string $cacheKey, int $loginCookieLifetime)
     {
         $this->client = $client;
+        $this->instance = $instance;
         $this->cache = $cache;
         $this->cacheKey = $cacheKey;
         $this->loginCookieLifetime = $loginCookieLifetime;
@@ -44,25 +51,25 @@ abstract class AbstractPageCrawler
     /**
      * Obtém o conteúdo HTML da página.
      *
-     * @param string $instance p_instance.
-     *
      * @return self
      */
-    public function crawl(string $instance = ''): self
+    public function crawl(): self
     {
-        $pageContents = $this->cache->getItem($this->cacheKey);
+        $pageContentsCacheItem = $this->cache->getItem($this->cacheKey);
 
-        if ($pageContents->isHit()) {
-            return $pageContents->get();
+        if ($pageContentsCacheItem->isHit()) {
+            $this->contents = $pageContentsCacheItem->get();
+
+            return $this;
         }
 
-        $uri = $this->getUri($instance);
+        $uri = $this->getUri($this->instance);
         $response = $this->client->get($uri);
         $this->contents = $response->getBody()->getContents();
 
-        $pageContents->set($this->contents);
-        $pageContents->expiresAfter($this->loginCookieLifetime);
-        $this->cache->save($pageContents);
+        $pageContentsCacheItem->set($this->contents);
+        $pageContentsCacheItem->expiresAfter($this->loginCookieLifetime);
+        $this->cache->save($pageContentsCacheItem);
 
         return $this;
     }
@@ -72,11 +79,9 @@ abstract class AbstractPageCrawler
      *
      * URI onde está a página para fazer o crawling.
      *
-     * @param string $instance p_instance.
-     *
      * @return string URI.
      */
-    abstract protected function getUri(string $instance): string;
+    abstract protected function getUri(): string;
 
     /**
      * Obtém o ajaxId.
@@ -109,7 +114,7 @@ abstract class AbstractPageCrawler
      */
     private function parseAjaxId(string $subject, string $leftRegExp, string $rightRegExp): ?string
     {
-        $pattern = sprintf('#%s\"ajaxIdentifier\"\:\"(?P<ajax_id>[A-Z0-9]+)\"%s#', $leftRegExp, $rightRegExp);
+        $pattern = sprintf('#%s"ajaxIdentifier":"(?P<ajax_id>.+)"%s#', $leftRegExp, $rightRegExp);
 
         if (preg_match($pattern, $subject, $matches)) {
             return $matches['ajax_id'];

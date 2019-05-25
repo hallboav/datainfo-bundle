@@ -13,37 +13,41 @@ class LauncherPageCrawler extends AbstractPageCrawler
     /**
      * {@inheritDoc}
      */
-    protected function getUri(string $instance): string
+    protected function getUri(): string
     {
-        return sprintf('/apex/f?p=104:100:%s', $instance);
+        return sprintf('/apex/f?p=104:100:%s', $this->instance);
     }
 
     /**
      * Obtém o ajaxId usado para obter as atividades.
      *
-     * @param string $contents
-     *
      * @return string
      */
-    public function getAjaxIdForActivitiesFetching(string $contents): string
+    public function getAjaxIdForActivitiesFetching(): string
     {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
         $leftRegExp = '\#P100_SEQ_ESFORCO\"\,';
 
-        return $this->getAjaxId($contents, $leftRegExp, '');
+        return $this->getAjaxId($this->contents, $leftRegExp, '');
     }
 
     /**
      * Obém o ajaxId usado para lançamento do realizado.
      *
-     * @param string $contents
-     *
      * @return string
      */
-    public function getAjaxIdForLaunching(string $contents): string
+    public function getAjaxIdForLaunching(): string
     {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
         $rightRegExp = '\,\"attribute01\"\:\".*P100_DATAESFORCO\,\#P100_DESCRICAO';
 
-        return $this->getAjaxId($contents, '', $rightRegExp);
+        return $this->getAjaxId($this->contents, '', $rightRegExp);
     }
 
     /**
@@ -53,10 +57,14 @@ class LauncherPageCrawler extends AbstractPageCrawler
      *
      * @return array
      */
-    public function getProjects(string $contents): array
+    public function getProjects(): array
     {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
         $options = [];
-        $crawler = new Crawler($contents);
+        $crawler = new Crawler($this->contents);
         $crawler->filter('#P100_PROJETOUSUARIO option:not([value=""])')->each(function (Crawler $option) use (&$options) {
             $options[] = new Project($option->attr('value'), $option->text());
         });

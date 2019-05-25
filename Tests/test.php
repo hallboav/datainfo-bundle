@@ -84,7 +84,7 @@ $uri = sprintf('%s%s', $client->getConfig('base_uri'), $queryPageUri);
 $crawler = new Crawler($contents, $uri);
 $salt = $crawler->filter('input#pSalt')->attr('value');
 $protected = $crawler->filter('input#pPageItemsProtected')->attr('value');
-$rowVersion = $crawler->filter('input#pPageItemsRowVersion')->attr('value');
+// $rowVersion = $crawler->filter('input#pPageItemsRowVersion')->attr('value');
 
 $parameters = [
     'p_flow_id' => '104',

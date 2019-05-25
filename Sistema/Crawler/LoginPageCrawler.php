@@ -2,7 +2,6 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Crawler;
 
-use GuzzleHttp\ClientInterface;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Form;
 
@@ -11,7 +10,6 @@ use Symfony\Component\DomCrawler\Form;
  */
 class LoginPageCrawler extends AbstractPageCrawler
 {
-    const LOGIN_URI = '/apex/f?p=104:LOGIN';
     const CONNECT_BUTTON_LABEL = 'Conectar';
 
     /**
@@ -27,7 +25,7 @@ class LoginPageCrawler extends AbstractPageCrawler
     /**
      * {@inheritDoc}
      */
-    public function getUri(string $instance): string
+    public function getUri(): string
     {
         return '/apex/f?p=104:LOGIN';
     }
@@ -39,10 +37,6 @@ class LoginPageCrawler extends AbstractPageCrawler
      */
     public function getInstance(): string
     {
-        if (null === $this->contents) {
-            $this->crawl();
-        }
-
         if (null === $this->form) {
             $this->form = $this->getForm();
         }
@@ -103,7 +97,7 @@ class LoginPageCrawler extends AbstractPageCrawler
             $this->crawl();
         }
 
-        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), self::LOGIN_URI);
+        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), $this->getUri());
 
         return new Crawler($this->contents, $uri);
     }

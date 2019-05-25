@@ -3,7 +3,6 @@
 namespace Hallboav\DatainfoBundle\Sistema;
 
 use GuzzleHttp\Client;
-
 use Psr\Log\LoggerInterface;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Cookie\SetCookie;
@@ -92,10 +91,9 @@ class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.project.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $contents = $launcherPageCrawler->crawl($this->instance);
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
 
-        return $launcherPageCrawler->getProjects($contents);
+        return $launcherPageCrawler->getProjects();
     }
 
     /**
@@ -118,9 +116,8 @@ class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.activity.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $contents = $launcherPageCrawler->crawl($this->instance);
-        $ajaxId = $launcherPageCrawler->getAjaxIdForActivitiesFetching($contents);
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $ajaxId = $launcherPageCrawler->getAjaxIdForActivitiesFetching();
 
         $activityLoader = new ActivityLoader($this->client);
 
@@ -149,13 +146,14 @@ class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.balance.%s', $user->getDatainfoUsername());
-        $queryPageCrawler = new QueryPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $contents = $queryPageCrawler->crawl($this->instance);
-        $ajaxId = $queryPageCrawler->getAjaxIdForBalanceChecking($contents);
+        $queryPageCrawler = new QueryPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $ajaxId = $queryPageCrawler->getAjaxIdForBalanceChecking();
+        $salt = $queryPageCrawler->getSalt();
+        $protected = $queryPageCrawler->getProtected();
 
         $balanceChecker = new BalanceChecker($this->client);
 
-        return $balanceChecker->check($this->instance, $ajaxId, $startDate, $endDate);
+        return $balanceChecker->check($startDate, $endDate, $this->instance, $ajaxId, $salt, $protected);
     }
 
     /**
@@ -211,9 +209,8 @@ class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.launcher.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $contents = $launcherPageCrawler->crawl($this->instance);
-        $ajaxId = $launcherPageCrawler->getAjaxIdForLaunching($contents);
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $ajaxId = $launcherPageCrawler->getAjaxIdForLaunching();
 
         $launcher = new Launcher($this->client);
 
@@ -235,11 +232,8 @@ class Sistema
         $this->authenticate($user);
 
         $cacheKey = 'foo';
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $contents = $launcherPageCrawler->crawl($this->instance);
-        $ajaxId = $launcherPageCrawler->getAjaxIdForFoo($contents);
-
-
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $ajaxId = $launcherPageCrawler->getAjaxIdForFoo();
 
         // $user, string $instance, string $ajaxId, string $performedTaskId, Task $task
     }
@@ -254,13 +248,12 @@ class Sistema
     protected function authenticate(DatainfoUserInterface $user): void
     {
         $cacheKey = sprintf('cache.credentials.%s', $user->getDatainfoUsername());
-        $userCredentials = $this->cache->getItem($cacheKey);
+        $userCredentialsCacheItem = $this->cache->getItem($cacheKey);
 
-        if ($userCredentials->isHit()) {
-            // Carregando credenciais do cache
-            $userCredentialsAsArray = $userCredentials->get();
-            $this->instance = $userCredentialsAsArray['instance'];
-            $cookies = $userCredentialsAsArray['cookies'];
+        if ($userCredentialsCacheItem->isHit()) {
+            $userCredentials = $userCredentialsCacheItem->get();
+            $this->instance = $userCredentials['instance'];
+            $cookies = $userCredentials['cookies'];
 
             foreach ($cookies as $cookie) {
                 $this->client->getConfig('cookies')
@@ -271,8 +264,8 @@ class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.login.%s', $user->getDatainfoUsername());
-        $loginPageCrawler = new LoginPageCrawler($this->client, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $this->instance = $loginPageCrawler->getInstance($contents);
+        $loginPageCrawler = new LoginPageCrawler($this->client, '', $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $this->instance = $loginPageCrawler->getInstance();
         $salt = $loginPageCrawler->getSalt();
         $protected = $loginPageCrawler->getProtected();
 
@@ -286,14 +279,14 @@ class Sistema
             'ORA_WWV_APP_104' => (string) $jar->getCookieByName('ORA_WWV_APP_104'),
         ];
 
-        $userCredentials->set([
+        $userCredentialsCacheItem->set([
             'instance' => $this->instance,
             'cookies' => $cookies,
         ]);
 
         // Salvando os cookies (que expiram em 1 hora) no cache
-        $userCredentials->expiresAfter($this->loginCookieLifetime);
-        $this->cache->save($userCredentials);
+        $userCredentialsCacheItem->expiresAfter($this->loginCookieLifetime);
+        $this->cache->save($userCredentialsCacheItem);
 
         // Disparando evento de autenticação
         $event = new AuthenticationEvent($user);
