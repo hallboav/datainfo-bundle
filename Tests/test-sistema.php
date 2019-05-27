@@ -80,5 +80,10 @@ $effortType = new EffortType('normal');
 $messages = $sistema->launchPerformedTasks($user, $activity, $tasks, $effortType);
 print_r($messages);
 
+// Loga no service
+// Entra na página de lançar pontos
+// Clica no dia (data) (terá um request com a tabela contendo o P100_NUMSEQESFORCO)
+// Após obter o P100_NUMSEQESFORCO, deve-se fazer um request para excluir
+
 // $message = $sistema->deleteTask($user, $taskId);
 // print_r($message);
