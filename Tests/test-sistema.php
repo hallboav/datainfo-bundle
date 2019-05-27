@@ -33,7 +33,7 @@ $user = new class implements DatainfoUserInterface {
 
     public function getDatainfoPassword(): string
     {
-        return 'Datainfo@17';
+        return '';
     }
 
     public function getPis(): string
@@ -45,28 +45,28 @@ $user = new class implements DatainfoUserInterface {
 $tz = new \DateTimeZone('America/Sao_Paulo');
 $sistema = new Sistema($client, new EventDispatcher(), new FilesystemAdapter(), strtotime('2 minutes', 0));
 
-// $balance = $sistema->getBalance($user, new \DateTime('2019-04-01', $tz), new \DateTime('2019-04-30', $tz));
+$balance = $sistema->getBalance($user, new \DateTime('2019-04-01', $tz), new \DateTime('2019-04-30', $tz));
 
-// echo 'A trabalhar: ', $balance->getTimeToWork(), PHP_EOL;
-// echo 'Trabalhadas: ', $balance->getWorkedTime(), PHP_EOL;
+echo 'A trabalhar: ', $balance->getTimeToWork(), PHP_EOL;
+echo 'Trabalhadas: ', $balance->getWorkedTime(), PHP_EOL;
 
-// echo '========================================', PHP_EOL;
+echo '========================================', PHP_EOL;
 
 $projects = $sistema->getProjects($user);
-// foreach ($projects as $project) {
-//     $activities = $sistema->getActivities($user, $project);
-//     foreach ($activities as $activity) {
-//         echo json_encode($activity), PHP_EOL;
-//     }
-// }
+foreach ($projects as $project) {
+    $activities = $sistema->getActivities($user, $project);
+    foreach ($activities as $activity) {
+        echo json_encode($activity), PHP_EOL;
+    }
+}
 
-// echo '========================================', PHP_EOL;
+echo '========================================', PHP_EOL;
 
 $tasks = new TaskCollection([
     new Task(
-        new \DateTime('2019-05-01T00:00:00', $tz),
-        new \DateTime('2019-05-01T12:00:00', $tz),
-        new \DateTime('2019-05-01T14:00:00', $tz),
+        (new \DateTime('today', $tz))->setTime(0, 0),
+        new \DateTime('now', $tz),
+        new \DateTime('1 hour', $tz),
         'Nuxa...',
         'NXA-0001'
     ),
