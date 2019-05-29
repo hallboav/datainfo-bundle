@@ -47,6 +47,8 @@ $sistema = new Sistema($client, new EventDispatcher(), new FilesystemAdapter(), 
 
 $balance = $sistema->getBalance($user, new \DateTime('2019-04-01', $tz), new \DateTime('2019-04-30', $tz));
 
+echo json_encode($balance);
+
 echo 'A trabalhar: ', $balance->getTimeToWork(), PHP_EOL;
 echo 'Trabalhadas: ', $balance->getWorkedTime(), PHP_EOL;
 

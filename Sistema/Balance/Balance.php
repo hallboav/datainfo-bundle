@@ -58,7 +58,34 @@ class Balance implements \JsonSerializable
     {
         return [
             'worked_time' => $this->getWorkedTime(),
+            'worked_time_timestamp' => $this->toTimestamp($this->getWorkedTime()),
             'time_to_work' => $this->getTimeToWork(),
+            'time_to_work_timestamp' => $this->toTimestamp($this->getTimeToWork()),
         ];
+    }
+
+    /**
+     * Converte string em timestamp.
+     *
+     * @return int
+     */
+    private function toTimestamp(string $time): int
+    {
+        $parts = preg_split('#:#', $time);
+
+        if (2 !== count($parts)) {
+            throw new \RuntimeException();
+        }
+
+        $interval = new \DateInterval(sprintf('PT%dH%dM', $parts[0], $parts[1]));
+
+        return mktime(
+            $interval->format('%h'),
+            $interval->format('%i'),
+            $interval->format('%s'),
+            $interval->format('%m'),
+            $interval->format('%d'),
+            0
+        );
     }
 }
