@@ -58,9 +58,9 @@ class Balance implements \JsonSerializable
     {
         return [
             'worked_time' => $this->getWorkedTime(),
-            'worked_time_timestamp' => $this->toTimestamp($this->getWorkedTime()),
+            'worked_time_timestamp' => $this->toIso8601Interval($this->getWorkedTime()),
             'time_to_work' => $this->getTimeToWork(),
-            'time_to_work_timestamp' => $this->toTimestamp($this->getTimeToWork()),
+            'time_to_work_timestamp' => $this->toIso8601Interval($this->getTimeToWork()),
         ];
     }
 
@@ -69,23 +69,12 @@ class Balance implements \JsonSerializable
      *
      * @return int
      */
-    private function toTimestamp(string $time): int
+    private function toIso8601Interval(string $time): string
     {
-        $parts = preg_split('#:#', $time);
-
-        if (2 !== count($parts)) {
-            throw new \RuntimeException();
+        if (!(null !== $replaced = preg_replace('#(\d+):(\d+)#', 'PT$1H$2M', $time) && $replaced !== $time)) {
+            throw new \RuntimeException(sprintf('Falha ao resolver o tempo "%s"', $time));
         }
 
-        $interval = new \DateInterval(sprintf('PT%dH%dM', $parts[0], $parts[1]));
-
-        return mktime(
-            $interval->format('%h'),
-            $interval->format('%i'),
-            $interval->format('%s'),
-            $interval->format('%m'),
-            $interval->format('%d'),
-            0
-        );
+        return $replaced;
     }
 }
