@@ -236,20 +236,20 @@ final class Sistema
         return $messages;
     }
 
-    public function deleteTask(DatainfoUserInterface $user): string
-    {
-        // $this->authenticate($user);
+    // public function deleteTask(DatainfoUserInterface $user): string
+    // {
+    //     $this->authenticate($user);
 
-        // $cacheKey = 'foo';
-        // $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        // $ajaxId = $launcherPageCrawler->getAjaxIdForTaskDeleting();
-        // $salt = $launcherPageCrawler->getSalt();
-        // $protected = $launcherPageCrawler->getProtected();
+    //     $cacheKey = 'foo';
+    //     $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+    //     $ajaxId = $launcherPageCrawler->getAjaxIdForTaskDeleting();
+    //     $salt = $launcherPageCrawler->getSalt();
+    //     $protected = $launcherPageCrawler->getProtected();
 
-        // $taskDeleter = new TaskDeleter($this->client);
+    //     $taskDeleter = new TaskDeleter($this->client);
 
-        // return $taskDeleter->deleteTask($user, $task, $performedTaskId, $this->instance, $ajaxId, $salt, $protected);
-    }
+    //     return $taskDeleter->deleteTask($user, $task, $performedTaskId, $this->instance, $ajaxId, $salt, $protected);
+    // }
 
     /**
      * Autentica o usuário.

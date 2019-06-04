@@ -76,10 +76,6 @@ class BalanceChecker
         $json = $response->getJson();
 
         if (!isset($json['item'][2]['value'], $json['item'][3]['value'])) {
-            throw new \UnexpectedValueException('A resposta do Service é insuficiente para determinar saldo de horas.');
-        }
-
-        if ('' === $json['item'][2]['value'] || '' === $json['item'][3]['value']) {
             return null;
         }
 

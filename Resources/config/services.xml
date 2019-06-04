@@ -8,7 +8,7 @@
         <parameter key="datainfo.client.base_uri">http://sistema.datainfo.inf.br</parameter>
         <parameter key="datainfo.client.headers.user_agent">launcherApp/1.0-alpha</parameter>
         <parameter key="datainfo.client.connect_timeout">30</parameter>
-        <parameter key="datainfo.login.cookie_lifetime">3600</parameter>
+        <parameter key="datainfo.login.cookie_lifetime">300</parameter>
     </parameters>
 
     <services>
