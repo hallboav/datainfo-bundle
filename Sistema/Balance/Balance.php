@@ -57,8 +57,8 @@ class Balance implements \JsonSerializable
     public function jsonSerialize(): array
     {
         return [
-            'worked_time_iso8601' => $this->toIso8601Interval($this->getWorkedTime()),
-            'time_to_work_iso8601' => $this->toIso8601Interval($this->getTimeToWork()),
+            'worked_time' => $this->toIso8601Interval($this->getWorkedTime()),
+            'time_to_work' => $this->toIso8601Interval($this->getTimeToWork()),
         ];
     }
 
