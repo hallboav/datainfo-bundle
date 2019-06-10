@@ -12,8 +12,6 @@ use Hallboav\DatainfoBundle\Sistema\Effort\FilteringEffortType;
  */
 class WidgetReporter
 {
-    const REPORT_URI = '/apex/wwv_flow.show';
-
     /**
      * @var ClientInterface
      */
@@ -34,43 +32,47 @@ class WidgetReporter
      *
      * Retorna as informações em um array com até 9999 linhas.
      *
-     * @param string                $instance
      * @param DatainfoUserInterface $user
      * @param \DateTimeInterface    $startDate
      * @param \DateTimeInterface    $endDate
      * @param FilteringEffortType   $effort    Tipo de esforço para filtro.
+     * @param string                $instance
+     * @param string                $ajaxId
+     * @param string                $salt
+     * @param string                $protected
      *
      * @return array Informações obtidas através da análise da resposta recebida.
      *
      * @throws \UnexpectedValueException Quando não é possível ler corretamente o conteúdo do elemento que possui a classe .apex_report_break.
      */
-    public function report(string $instance, DatainfoUserInterface $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, FilteringEffortType $effort): array
+    public function report(DatainfoUserInterface $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, FilteringEffortType $effort, string $instance, string $ajaxId, string $salt, string $protected): array
     {
         $parameters = [
-            'p_request=APXWGT',
-            'p_flow_id=104',
-            'p_flow_step_id=10',
-            sprintf('p_instance=%s', $instance),
-            'p_arg_names=P10_COD_USER',
-            // É possível ver relatório de outros usuários, basta alterar o campo abaixo
-            sprintf('p_arg_values=%s', strtoupper($user->getDatainfoUsername())),
-            'p_arg_names=P10_W_DAT_INICIO',
-            sprintf('p_arg_values=%s', $startDate->format('d/m/Y')),
-            'p_arg_names=P10_W_DAT_TERMINO',
-            sprintf('p_arg_values=%s', $endDate->format('d/m/Y')),
-            'p_arg_names=P10_W_TIP_ESFORCO',
-            sprintf('p_arg_values=%s', $effort->getId()),
-            'p_widget_action=paginate',
-            'p_pg_min_row=1',
-            'p_pg_max_rows=9999',
-            'p_pg_rows_fetched=9999',
-            'x01=88237305110178876',
-            'p_widget_name=classic_report',
+            'p_flow_id' => '104',
+            'p_flow_step_id' => '100',
+            'p_instance' => $instance,
+            'p_request' => sprintf('PLUGIN=%s', urlencode($ajaxId)),
+            'p_widget_action' => 'paginate',
+            'p_pg_min_row' => '1',
+            'p_pg_max_rows' => '9999',
+            'p_pg_rows_fetched' => '9999',
+            'x01' => '88237305110178876',
+            'p_json' => json_encode([
+                'salt' => $salt,
+                'pageItems' => [
+                    'itemsToSubmit' => [
+                        ['n' => 'P10_COD_USER',      'v' => strtoupper($user->getDatainfoUsername())],
+                        ['n' => 'P10_W_DAT_INICIO',  'v' => $startDate->format('d/m/Y')],
+                        ['n' => 'P10_W_DAT_TERMINO', 'v' => $endDate->format('d/m/Y')],
+                        ['n' => 'P10_W_TIP_ESFORCO', 'v' => $effort->getId()],
+                    ],
+                    'protected' => $protected,
+                ],
+            ]),
         ];
 
-        $response = $this->client->post(self::REPORT_URI, [
-            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-            'body' => implode('&', $parameters),
+        $response = $this->client->post('/apex/wwv_flow.ajax', [
+            'form_params' => $parameters,
         ]);
 
         $crawler = new Crawler(

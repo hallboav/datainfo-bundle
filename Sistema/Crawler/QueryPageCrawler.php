@@ -38,4 +38,19 @@ class QueryPageCrawler extends AbstractPageCrawler
 
         return $this->getAjaxId($this->contents, '', $rightRegExp);
     }
+
+    public function getAjaxIdForReporting(): string
+    {
+        if (null === $this->contents) {
+            $this->crawl();
+        }
+
+        $pattern = '#apex\.widget\.report\.init\("P10_LISTA"\,"(?P<ajax_id>.+)"#';
+
+        if (!preg_match($pattern, $this->contents, $matches)) {
+            throw new \LengthException('ajaxIdentifier não encontrado');
+        }
+
+        return $matches['ajax_id'];
+    }
 }

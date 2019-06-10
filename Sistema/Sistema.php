@@ -94,7 +94,13 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.project.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $launcherPageCrawler = new LauncherPageCrawler(
+            $this->client,
+            $this->instance,
+            $this->cache,
+            $cacheKey,
+            $this->loginCookieLifetime
+        );
 
         return $launcherPageCrawler->getProjects();
     }
@@ -119,14 +125,23 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.activity.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $salt = $launcherPageCrawler->getSalt();
-        $protected = $launcherPageCrawler->getProtected();
-        $ajaxId = $launcherPageCrawler->getAjaxIdForActivitiesFetching();
+        $launcherPageCrawler = new LauncherPageCrawler(
+            $this->client,
+            $this->instance,
+            $this->cache,
+            $cacheKey,
+            $this->loginCookieLifetime
+        );
 
         $activityLoader = new ActivityLoader($this->client);
 
-        return $activityLoader->load($project, $this->instance, $ajaxId, $salt, $protected);
+        return $activityLoader->load(
+            $project,
+            $this->instance,
+            $launcherPageCrawler->getAjaxIdForActivitiesFetching(),
+            $launcherPageCrawler->getSalt(),
+            $launcherPageCrawler->getProtected()
+        );
     }
 
     /**
@@ -151,14 +166,24 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.balance.%s', $user->getDatainfoUsername());
-        $queryPageCrawler = new QueryPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $ajaxId = $queryPageCrawler->getAjaxIdForBalanceChecking();
-        $salt = $queryPageCrawler->getSalt();
-        $protected = $queryPageCrawler->getProtected();
+        $queryPageCrawler = new QueryPageCrawler(
+            $this->client,
+            $this->instance,
+            $this->cache,
+            $cacheKey,
+            $this->loginCookieLifetime
+        );
 
         $balanceChecker = new BalanceChecker($this->client);
 
-        return $balanceChecker->check($startDate, $endDate, $this->instance, $ajaxId, $salt, $protected);
+        return $balanceChecker->check(
+            $startDate,
+            $endDate,
+            $this->instance,
+            $queryPageCrawler->getAjaxIdForBalanceChecking(),
+            $queryPageCrawler->getSalt(),
+            $queryPageCrawler->getProtected()
+        );
     }
 
     /**
@@ -167,7 +192,7 @@ final class Sistema
      * @param DatainfoUserInterface $user
      * @param \DateTimeInterface    $startDate
      * @param \DateTimeInterface    $endDate
-     * @param string                $effortType "todos" é o valor padrão.
+     * @param string                $effortType
      *
      * @return array Relatório.
      */
@@ -184,9 +209,27 @@ final class Sistema
             ]);
         }
 
+        $cacheKey = sprintf('cache.crawler.widget_report.%s', $user->getDatainfoUsername());
+        $queryPageCrawler = new QueryPageCrawler(
+            $this->client,
+            $this->instance,
+            $this->cache,
+            $cacheKey,
+            $this->loginCookieLifetime
+        );
+
         $widgetReporter = new WidgetReporter($this->client);
 
-        return $widgetReporter->report($this->instance, $user, $startDate, $endDate, $effortType);
+        return $widgetReporter->report(
+            $user,
+            $startDate,
+            $endDate,
+            $effortType,
+            $this->instance,
+            $queryPageCrawler->getAjaxIdForReporting(),
+            $queryPageCrawler->getSalt(),
+            $queryPageCrawler->getProtected()
+        );
     }
 
     /**
@@ -214,16 +257,28 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.launcher.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
-        $ajaxId = $launcherPageCrawler->getAjaxIdForLaunching();
-        $salt = $launcherPageCrawler->getSalt();
-        $protected = $launcherPageCrawler->getProtected();
+        $launcherPageCrawler = new LauncherPageCrawler(
+            $this->client,
+            $this->instance,
+            $this->cache,
+            $cacheKey,
+            $this->loginCookieLifetime
+        );
 
         $launcher = new Launcher($this->client);
 
         $messages = [];
         foreach ($tasks as $task) {
-            $message = $launcher->launch($user, $task, $activity, $effortType, $this->instance, $ajaxId, $salt, $protected);
+            $message = $launcher->launch(
+                $user,
+                $task,
+                $activity,
+                $effortType,
+                $this->instance,
+                $launcherPageCrawler->getAjaxIdForLaunching(),
+                $launcherPageCrawler->getSalt(),
+                $launcherPageCrawler->getProtected()
+            );
 
             $messages[] = [
                 'date' => $task->getDate()->format(\DateTime::ATOM),
@@ -240,15 +295,26 @@ final class Sistema
     // {
     //     $this->authenticate($user);
 
-    //     $cacheKey = 'foo';
-    //     $launcherPageCrawler = new LauncherPageCrawler($this->client, $this->instance, $this->cache, $cacheKey, $this->loginCookieLifetime);
-    //     $ajaxId = $launcherPageCrawler->getAjaxIdForTaskDeleting();
-    //     $salt = $launcherPageCrawler->getSalt();
-    //     $protected = $launcherPageCrawler->getProtected();
+    //     $cacheKey = sprintf('cache.crawler.task_delete.%s', $user->getDatainfoUsername());
+    //     $launcherPageCrawler = new LauncherPageCrawler(
+    //         $this->client,
+    //         $this->instance,
+    //         $this->cache,
+    //         $cacheKey,
+    //         $this->loginCookieLifetime
+    //     );
 
     //     $taskDeleter = new TaskDeleter($this->client);
 
-    //     return $taskDeleter->deleteTask($user, $task, $performedTaskId, $this->instance, $ajaxId, $salt, $protected);
+    //     return $taskDeleter->deleteTask(
+    //         $user,
+    //         $task,
+    //         $performedTaskId,
+    //         $this->instance,
+    //         $launcherPageCrawler->getAjaxIdForTaskDeleting(),
+    //         $launcherPageCrawler->getSalt(),
+    //         $launcherPageCrawler->getProtected()
+    //     );
     // }
 
     /**
@@ -277,13 +343,22 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.login.%s', $user->getDatainfoUsername());
-        $loginPageCrawler = new LoginPageCrawler($this->client, '', $this->cache, $cacheKey, $this->loginCookieLifetime);
+        $loginPageCrawler = new LoginPageCrawler(
+            $this->client,
+            '',
+            $this->cache,
+            $cacheKey,
+            $this->loginCookieLifetime
+        );
         $this->instance = $loginPageCrawler->getInstance();
-        $salt = $loginPageCrawler->getSalt();
-        $protected = $loginPageCrawler->getProtected();
 
         $authenticator = new Authenticator($this->client);
-        $authenticator->authenticate($user, $this->instance, $salt, $protected);
+        $authenticator->authenticate(
+            $user,
+            $this->instance,
+            $loginPageCrawler->getSalt(),
+            $loginPageCrawler->getProtected()
+        );
 
         // Lendo os cookies no client
         $jar = $this->client->getConfig('cookies');
