@@ -77,7 +77,7 @@ class WidgetReporter
 
         $crawler = new Crawler(
             $response->getBody()->getContents(),
-            sprintf('%s%s', $this->client->getConfig('base_uri'), self::REPORT_URI)
+            sprintf('%s%s', $this->client->getConfig('base_uri'), '/apex/wwv_flow.ajax')
         );
 
         if (1 === $crawler->filter('.nodatafound')->count()) {
