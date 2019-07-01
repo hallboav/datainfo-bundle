@@ -45,8 +45,7 @@ class QueryPageCrawler extends AbstractPageCrawler
             $this->crawl();
         }
 
-        $pattern = '#apex\.widget\.report\.init\("P10_LISTA"\,"(?P<ajax_id>.+)"#';
-
+        $pattern = '#apex\.widget\.report\.init\("P10_LISTA"\,"(?P<ajax_id>.+)"\,\{"pageItems#';
         if (!preg_match($pattern, $this->contents, $matches)) {
             throw new \LengthException('ajaxIdentifier não encontrado');
         }

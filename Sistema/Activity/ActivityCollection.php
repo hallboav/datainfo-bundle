@@ -10,7 +10,7 @@ class ActivityCollection implements \IteratorAggregate
     /**
      * @var array
      */
-    private $activities;
+    private $activities = [];
 
     /**
      * Construtor.

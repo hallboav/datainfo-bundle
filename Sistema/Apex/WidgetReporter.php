@@ -49,7 +49,7 @@ class WidgetReporter
     {
         $parameters = [
             'p_flow_id' => '104',
-            'p_flow_step_id' => '100',
+            'p_flow_step_id' => '10',
             'p_instance' => $instance,
             'p_request' => sprintf('PLUGIN=%s', urlencode($ajaxId)),
             'p_widget_action' => 'paginate',

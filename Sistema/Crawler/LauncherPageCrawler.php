@@ -44,7 +44,7 @@ class LauncherPageCrawler extends AbstractPageCrawler
     }
 
     /**
-     * Obém o ajaxId usado para lançamento do realizado.
+     * Obtém o ajaxId usado para lançamento do realizado.
      *
      * @return string
      */
@@ -59,15 +59,14 @@ class LauncherPageCrawler extends AbstractPageCrawler
         return $this->getAjaxId($this->contents, '', $rightRegExp);
     }
 
+    /**
+     * Obtém o ajaxId usado para deleção do realizado.
+     *
+     * @return string
+     */
     public function getAjaxIdForTaskDeleting(): string
     {
-        if (null === $this->contents) {
-            $this->crawl();
-        }
-
-        $rightRegExp = '\,"attribute01":".*P100_DATAESFORCO\,\#P100_DESCRICAO';
-
-        return $this->getAjaxId($this->contents, '', $rightRegExp);
+        return $this->getAjaxIdForLaunching();
     }
 
     /**

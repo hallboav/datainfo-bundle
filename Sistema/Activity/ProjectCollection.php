@@ -10,7 +10,7 @@ class ProjectCollection implements \IteratorAggregate
     /**
      * @var array
      */
-    private $projects;
+    private $projects = [];
 
     /**
      * Construtor.
