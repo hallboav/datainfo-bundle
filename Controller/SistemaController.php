@@ -135,7 +135,7 @@ class SistemaController extends AbstractController
             ]);
         }
 
-        throw new BadRequestHttpException((string) $form->getErrors($errorsOfChildForms = true));
+        throw new BadRequestHttpException((string) $form->getErrors($errorsOfChildForms = true, $flatten = false));
     }
 
     /**

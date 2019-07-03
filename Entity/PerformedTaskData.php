@@ -12,41 +12,41 @@ class PerformedTaskData
     /**
      * @var \DateTimeInterface|null
      *
-     * @Assert\NotBlank()
-     * @Assert\DateTime("Y-m-d\T00:00:00P")
+     * @Assert\NotBlank(message="Data não pode ser vazia")
+     * @Assert\DateTime(message="A data deve estar no formato válido", format="Y-m-d\T00:00:00P")
      */
     private $date;
 
     /**
      * @var \DateTimeInterface|null
      *
-     * @Assert\NotBlank()
-     * @Assert\DateTime("Y-m-d\TH:i:sP")
+     * @Assert\NotBlank(message="Hora inicial não pode ser vazia")
+     * @Assert\DateTime(message="A hora inicial deve estar no formato válido", format="Y-m-d\TH:i:sP")
      */
     private $startTime;
 
     /**
      * @var \DateTimeInterface|null
      *
-     * @Assert\NotBlank()
-     * @Assert\DateTime("Y-m-d\TH:i:sP")
+     * @Assert\NotBlank(message="Hora final não pode ser vazia")
+     * @Assert\DateTime(message="A hora final deve estar no formato válido", format="Y-m-d\TH:i:sP")
      */
     private $endTime;
 
     /**
      * @var string|null
      *
-     * @Assert\NotBlank()
-     * @Assert\Type("string")
-     * @Assert\Length(max=500)
+     * @Assert\NotBlank(message="Descrição não pode ser vazia")
+     * @Assert\Type(message="Descrição deve ser do tipo string", type="string")
+     * @Assert\Length(message="Mensagem deve ter no máximo 500 caracteres", max=500)
      */
     private $description;
 
     /**
      * @var string|null
      *
-     * @Assert\NotBlank()
-     * @Assert\Type("string")
+     * @Assert\NotBlank(message="O ticket não pode ser vazio")
+     * @Assert\Type(message="O ticket deve ser do tipo string", type="string")
      */
     private $ticket;
 

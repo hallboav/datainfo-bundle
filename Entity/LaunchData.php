@@ -12,14 +12,14 @@ class LaunchData
     /**
      * @var string|null
      *
-     * @Assert\NotBlank()
+     * @Assert\NotBlank(message="Atividade não pode ser vazia")
      */
     private $activityId;
 
     /**
      * @var array|null
      *
-     * @Assert\NotBlank()
+     * @Assert\NotBlank(message="O campo de tarefas realizadas não pode ser vazio")
      */
     private $performedTasks;
 

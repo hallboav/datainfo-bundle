@@ -6,7 +6,6 @@ use Hallboav\DatainfoBundle\Entity\PerformedTaskData;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 
@@ -21,20 +20,17 @@ class PerformedTaskType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('date', DateType::class, [
+            ->add('date', DateTimeType::class, [
                 'widget' => 'single_text',
                 'input' => 'datetime',
-                'format' => 'yyyy-MM-dd\'T00:00:00\'xxx',
             ])
             ->add('start_time', DateTimeType::class, [
                 'widget' => 'single_text',
                 'input' => 'datetime',
-                'format' => 'yyyy-MM-dd\'T\'HH:mm:ssxxx',
             ])
             ->add('end_time', DateTimeType::class, [
                 'widget' => 'single_text',
                 'input' => 'datetime',
-                'format' => 'yyyy-MM-dd\'T\'HH:mm:ssxxx',
             ])
             ->add('description', TextType::class)
             ->add('ticket', TextType::class);
