@@ -23,14 +23,17 @@ class PerformedTaskType extends AbstractType
             ->add('date', DateTimeType::class, [
                 'widget' => 'single_text',
                 'input' => 'datetime',
+                'model_timezone' => 'America/Sao_Paulo',
             ])
             ->add('start_time', DateTimeType::class, [
                 'widget' => 'single_text',
                 'input' => 'datetime',
+                'model_timezone' => 'America/Sao_Paulo',
             ])
             ->add('end_time', DateTimeType::class, [
                 'widget' => 'single_text',
                 'input' => 'datetime',
+                'model_timezone' => 'America/Sao_Paulo',
             ])
             ->add('description', TextType::class)
             ->add('ticket', TextType::class);
