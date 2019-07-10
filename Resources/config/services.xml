@@ -40,7 +40,10 @@
         <service id="datainfo.client.default" alias="datainfo.client.guzzle_http" public="false" />
 
         <!-- Cache Adapter -->
-        <service id="datainfo.cache.filesystem" class="Symfony\Component\Cache\Adapter\FilesystemAdapter" public="false" />
+        <service id="datainfo.cache.filesystem" class="Symfony\Component\Cache\Adapter\FilesystemAdapter" public="false">
+            <argument>datainfo</argument>
+            <argument>%datainfo.login.cookie_lifetime%</argument>
+        </service>
 
         <service id="datainfo.cache.default_adapter" alias="datainfo.cache.filesystem" public="false" />
 
@@ -51,7 +54,6 @@
             <argument type="service" id="datainfo.client.default" />
             <argument type="service" id="event_dispatcher" />
             <argument type="service" id="datainfo.cache.default_adapter" />
-            <argument>%datainfo.login.cookie_lifetime%</argument>
             <argument type="service" id="logger" on-invalid="null" />
         </service>
 

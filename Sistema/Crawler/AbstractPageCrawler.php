@@ -49,15 +49,13 @@ abstract class AbstractPageCrawler
      * @param string           $instance            p_instance.
      * @param AdapterInterface $cache
      * @param string           $cacheKey
-     * @param int              $loginCookieLifetime
      */
-    public function __construct(ClientInterface $client, string $instance, AdapterInterface $cache, string $cacheKey, int $loginCookieLifetime)
+    public function __construct(ClientInterface $client, string $instance, AdapterInterface $cache, string $cacheKey)
     {
         $this->client = $client;
         $this->instance = $instance;
         $this->cache = $cache;
         $this->cacheKey = $cacheKey;
-        $this->loginCookieLifetime = $loginCookieLifetime;
     }
 
     /**
@@ -98,7 +96,6 @@ abstract class AbstractPageCrawler
         $this->contents = $response->getBody()->getContents();
 
         $pageContentsCacheItem->set($this->contents);
-        $pageContentsCacheItem->expiresAfter($this->loginCookieLifetime);
         $this->cache->save($pageContentsCacheItem);
 
         return $this;

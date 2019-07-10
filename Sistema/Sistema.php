@@ -64,15 +64,13 @@ final class Sistema
      * @param ClientInterface          $client
      * @param EventDispatcherInterface $dispatcher
      * @param AdapterInterface         $cache
-     * @param int                      $loginCookieLifetime
      * @param LoggerInterface          $logger
      */
-    public function __construct(ClientInterface $client, EventDispatcherInterface $dispatcher, AdapterInterface $cache, int $loginCookieLifetime, LoggerInterface $logger = null)
+    public function __construct(ClientInterface $client, EventDispatcherInterface $dispatcher, AdapterInterface $cache, LoggerInterface $logger = null)
     {
         $this->client = $client;
         $this->dispatcher = $dispatcher;
         $this->cache = $cache;
-        $this->loginCookieLifetime = $loginCookieLifetime;
         $this->logger = $logger;
     }
 
@@ -98,8 +96,7 @@ final class Sistema
             $this->client,
             $this->instance,
             $this->cache,
-            $cacheKey,
-            $this->loginCookieLifetime
+            $cacheKey
         );
 
         return $launcherPageCrawler->getProjects();
@@ -129,8 +126,7 @@ final class Sistema
             $this->client,
             $this->instance,
             $this->cache,
-            $cacheKey,
-            $this->loginCookieLifetime
+            $cacheKey
         );
 
         $activityLoader = new ActivityLoader($this->client);
@@ -170,8 +166,7 @@ final class Sistema
             $this->client,
             $this->instance,
             $this->cache,
-            $cacheKey,
-            $this->loginCookieLifetime
+            $cacheKey
         );
 
         $balanceChecker = new BalanceChecker($this->client);
@@ -214,8 +209,7 @@ final class Sistema
             $this->client,
             $this->instance,
             $this->cache,
-            $cacheKey,
-            $this->loginCookieLifetime
+            $cacheKey
         );
 
         $widgetReporter = new WidgetReporter($this->client);
@@ -261,8 +255,7 @@ final class Sistema
             $this->client,
             $this->instance,
             $this->cache,
-            $cacheKey,
-            $this->loginCookieLifetime
+            $cacheKey
         );
 
         $launcher = new Launcher($this->client);
@@ -300,8 +293,7 @@ final class Sistema
     //         $this->client,
     //         $this->instance,
     //         $this->cache,
-    //         $cacheKey,
-    //         $this->loginCookieLifetime
+    //         $cacheKey
     //     );
 
     //     $taskDeleter = new TaskDeleter($this->client);
@@ -347,8 +339,7 @@ final class Sistema
             $this->client,
             '',
             $this->cache,
-            $cacheKey,
-            $this->loginCookieLifetime
+            $cacheKey
         );
         $this->instance = $loginPageCrawler->getInstance();
 
@@ -372,8 +363,7 @@ final class Sistema
             'cookies' => $cookies,
         ]);
 
-        // Salvando os cookies (que expiram em 1 hora) no cache
-        $userCredentialsCacheItem->expiresAfter($this->loginCookieLifetime);
+        // Salvando os cookies no cache
         $this->cache->save($userCredentialsCacheItem);
 
         // Disparando evento de autenticação
