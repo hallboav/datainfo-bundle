@@ -377,4 +377,29 @@ final class Sistema
             ]);
         }
     }
+
+    /**
+     * Remove o cache de autenticação de um usuário específico.
+     *
+     * @param DatainfoUserInterface $user
+     *
+     * @return void
+     */
+    public function invalidateUserCache(DatainfoUserInterface $user): void
+    {
+        $items = [
+            sprintf('cache.crawler.project.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.activity.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.balance.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.widget_report.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.launcher.%s', $user->getDatainfoUsername()),
+            // sprintf('cache.crawler.task_delete.%s', $user->getDatainfoUsername()),
+            sprintf('cache.credentials.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.login.%s', $user->getDatainfoUsername()),
+        ];
+
+        foreach ($items as $item) {
+            $this->cache->deleteItem($item);
+        }
+    }
 }
