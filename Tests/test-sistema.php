@@ -1,8 +1,6 @@
 <?php
 
-use GuzzleHttp\Client;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Middleware;
+use Symfony\Component\HttpClient\HttpClient;
 use Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse;
 use Hallboav\DatainfoBundle\Sistema\Effort\EffortType;
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
@@ -15,14 +13,9 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-$handlerStack = HandlerStack::create();
-$handlerStack->push(Middleware::mapResponse('\Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse::parse'));
-
-$client = new Client([
-    'cookies' => true,
+$client = HttpClient::create([
     'base_uri' => 'http://sistema.datainfo.inf.br',
-    'connect_timeout' => 30,
-    'handler' => $handlerStack,
+    'timeout' => 30,
 ]);
 
 $user = new class implements DatainfoUserInterface {
@@ -33,7 +26,7 @@ $user = new class implements DatainfoUserInterface {
 
     public function getDatainfoPassword(): string
     {
-        return '';
+        return 'Datainfo1119';
     }
 
     public function getPis(): string
@@ -43,7 +36,7 @@ $user = new class implements DatainfoUserInterface {
 };
 
 $tz = new \DateTimeZone('America/Sao_Paulo');
-$sistema = new Sistema($client, new EventDispatcher(), new FilesystemAdapter(), strtotime('2 minutes', 0));
+$sistema = new Sistema($client, new EventDispatcher(), new FilesystemAdapter());
 
 $balance = $sistema->getBalance($user, new \DateTime('2019-04-01', $tz), new \DateTime('2019-04-30', $tz));
 
@@ -62,25 +55,25 @@ foreach ($projects as $project) {
     }
 }
 
-echo '========================================', PHP_EOL;
+// echo '========================================', PHP_EOL;
 
-$tasks = new TaskCollection([
-    new Task(
-        (new \DateTime('today', $tz))->setTime(0, 0),
-        new \DateTime('now', $tz),
-        new \DateTime('1 hour', $tz),
-        'Nuxa...',
-        'NXA-0001'
-    ),
-]);
+// $tasks = new TaskCollection([
+//     new Task(
+//         (new \DateTime('today', $tz))->setTime(0, 0),
+//         new \DateTime('now', $tz),
+//         new \DateTime('1 hour', $tz),
+//         'Nuxa...',
+//         'NXA-0001'
+//     ),
+// ]);
 
-$project = $projects->getIterator()->offsetGet(0);
-$activities = $sistema->getActivities($user, $project);
-$activity = $activities->getIterator()->offsetGet(0);
-$effortType = new EffortType('normal');
+// $project = $projects->getIterator()->offsetGet(0);
+// $activities = $sistema->getActivities($user, $project);
+// $activity = $activities->getIterator()->offsetGet(0);
+// $effortType = new EffortType('normal');
 
-$messages = $sistema->launchPerformedTasks($user, $activity, $tasks, $effortType);
-print_r($messages);
+// $messages = $sistema->launchPerformedTasks($user, $activity, $tasks, $effortType);
+// print_r($messages);
 
 // Loga no service
 // Entra na página de lançar pontos

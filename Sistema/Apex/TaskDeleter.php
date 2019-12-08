@@ -1,11 +1,10 @@
 <?php
 
-use GuzzleHttp\ClientInterface;
-use Symfony\Component\Validator\Validation;
+use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
 use Hallboav\DatainfoBundle\Sistema\Task\Task;
 use Symfony\Component\Validator\Constraints as Assert;
-use Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse;
-use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
+use Symfony\Component\Validator\Validation;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -13,16 +12,16 @@ use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
 class TaskDeleter
 {
     /**
-     * @var ClientInterface
+     * @var HttpClientInterface
      */
     private $client;
 
     /**
      * Construtor.
      *
-     * @param ClientInterface $client
+     * @param HttpClientInterface $client
      */
-    public function __construct(ClientInterface $client)
+    public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
     }
@@ -63,15 +62,11 @@ class TaskDeleter
             ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.ajax', [
-            'form_params' => $parameters,
+        $response = $this->client->request('POST', '/apex/wwv_flow.ajax', [
+            'body' => $parameters,
         ]);
 
-        if (!($response instanceof JsonResponse)) {
-            throw new \UnexpectedValueException('A resposta deve ser do tipo JSON.');
-        }
-
-        $json = $response->getJson();
+        $json = $response->toArray();
 
         $validator = Validation::createValidator();
         $violations = $validator->validate($json, $this->createConstraint());

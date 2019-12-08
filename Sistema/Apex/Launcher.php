@@ -2,9 +2,8 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Apex;
 
-use GuzzleHttp\ClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Hallboav\DatainfoBundle\Sistema\Activity\Activity;
-use Hallboav\DatainfoBundle\Sistema\Client\Middleware\JsonResponse;
 use Hallboav\DatainfoBundle\Sistema\Effort\EffortType;
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
 use Hallboav\DatainfoBundle\Sistema\Task\Task;
@@ -17,16 +16,16 @@ use Symfony\Component\Validator\Validation;
 class Launcher
 {
     /**
-     * @var ClientInterface
+     * @var HttpClientInterface
      */
     private $client;
 
     /**
      * Construtor.
      *
-     * @param ClientInterface $client
+     * @param HttpClientInterface $client
      */
-    public function __construct(ClientInterface $client)
+    public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
     }
@@ -80,15 +79,11 @@ class Launcher
             ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.ajax', [
-            'form_params' => $parameters,
+        $response = $this->client->request('POST', '/apex/wwv_flow.ajax', [
+            'body' => $parameters,
         ]);
 
-        if (!($response instanceof JsonResponse)) {
-            throw new \UnexpectedValueException('A resposta deve ser do tipo JSON.');
-        }
-
-        $json = $response->getJson();
+        $json = $response->toArray();
 
         $validator = Validation::createValidator();
         $violations = $validator->validate($json, $this->createConstraint());

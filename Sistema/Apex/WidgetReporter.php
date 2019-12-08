@@ -2,10 +2,10 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Apex;
 
-use GuzzleHttp\ClientInterface;
-use Symfony\Component\DomCrawler\Crawler;
-use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
 use Hallboav\DatainfoBundle\Sistema\Effort\FilteringEffortType;
+use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
+use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -13,16 +13,16 @@ use Hallboav\DatainfoBundle\Sistema\Effort\FilteringEffortType;
 class WidgetReporter
 {
     /**
-     * @var ClientInterface
+     * @var HttpClientInterface
      */
     private $client;
 
     /**
      * Construtor.
      *
-     * @param ClientInterface $client
+     * @param HttpClientInterface $client
      */
-    public function __construct(ClientInterface $client)
+    public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
     }
@@ -71,13 +71,13 @@ class WidgetReporter
             ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.ajax', [
-            'form_params' => $parameters,
+        $response = $this->client->request('POST', '/apex/wwv_flow.ajax', [
+            'body' => $parameters,
         ]);
 
         $crawler = new Crawler(
-            $response->getBody()->getContents(),
-            sprintf('%s%s', $this->client->getConfig('base_uri'), '/apex/wwv_flow.ajax')
+            $response->getContent(),
+            sprintf('%s%s', 'http://sistema.datainfo.inf.br', '/apex/wwv_flow.ajax')
         );
 
         if (1 === $crawler->filter('.nodatafound')->count()) {

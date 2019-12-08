@@ -2,8 +2,9 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Apex;
 
-use GuzzleHttp\ClientInterface;
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
+use Symfony\Component\BrowserKit\CookieJar as BrowserKitCookieJar;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -11,16 +12,16 @@ use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
 class Authenticator
 {
     /**
-     * @var ClientInterface
+     * @var HttpClientInterface
      */
     private $client;
 
     /**
      * Construtor.
      *
-     * @param ClientInterface $client
+     * @param HttpClientInterface $client
      */
-    public function __construct(ClientInterface $client)
+    public function __construct(HttpClientInterface $client)
     {
         $this->client = $client;
     }
@@ -34,12 +35,13 @@ class Authenticator
      * @param string                $instance  p_instance.
      * @param string                $salt
      * @param string                $protected
+     * @param BrowserKitCookieJar   $cookieJar
      *
      * @return void
      *
      * @throws \InvalidArgumentException Quando o usuário e/ou a senha estão incorretos.
      */
-    public function authenticate(DatainfoUserInterface $user, string $instance, string $salt, string $protected): void
+    public function authenticate(DatainfoUserInterface $user, string $instance, string $salt, string $protected, BrowserKitCookieJar $cookieJar): void
     {
         $parameters = [
             'p_flow_id' => '104',
@@ -57,14 +59,34 @@ class Authenticator
             ]),
         ];
 
-        $response = $this->client->post('/apex/wwv_flow.accept', [
-            'form_params' => $parameters,
-            'allow_redirects' => [
-                'max' => 1,
-            ],
+        $headers = [];
+
+        $cookies = [];
+        foreach ($cookieJar->allRawValues('') as $name => $value) {
+            $cookies[] = sprintf('%s=%s', $name, $value);
+        }
+
+        if (0 < count($cookies)) {
+            $headers['cookie'] = implode('; ', $cookies);
+        }
+
+        $response = $this->client->request('POST', '/apex/wwv_flow.accept', [
+            'body' => $parameters,
+            'headers' => $headers,
+            'max_redirects' => 0,
         ]);
 
-        if (false === strpos($response->getBody()->getContents(), 'Sair')) {
+        echo 'HEADERS ANTES:', PHP_EOL;
+        var_dump($headers);
+        echo PHP_EOL, '------------', PHP_EOL, PHP_EOL, 'HEADERS DEPOIS:', PHP_EOL;
+        var_dump($response->getHeaders()['set-cookie']);
+        echo PHP_EOL, '------------', PHP_EOL, PHP_EOL, 'CONTENT:', PHP_EOL;
+        var_dump($response->getContent());
+        die;
+
+
+
+        if (false === strpos($response->getContent(), 'Sair')) {
             throw new \InvalidArgumentException('Usuário e/ou senha inválido(s)');
         }
     }

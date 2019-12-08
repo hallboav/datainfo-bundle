@@ -3,7 +3,7 @@
 namespace Hallboav\DatainfoBundle\Sistema;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\ClientInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use GuzzleHttp\Cookie\SetCookie;
 use Hallboav\DatainfoBundle\Event\AuthenticationEvent;
 use Hallboav\DatainfoBundle\Event\DatainfoEvents;
@@ -34,7 +34,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 final class Sistema
 {
     /**
-     * @var ClientInterface
+     * @var HttpClientInterface
      */
     protected $client;
 
@@ -61,12 +61,12 @@ final class Sistema
     /**
      * Construtor.
      *
-     * @param ClientInterface          $client
+     * @param HttpClientInterface      $client
      * @param EventDispatcherInterface $dispatcher
      * @param AdapterInterface         $cache
      * @param LoggerInterface          $logger
      */
-    public function __construct(ClientInterface $client, EventDispatcherInterface $dispatcher, AdapterInterface $cache, LoggerInterface $logger = null)
+    public function __construct(HttpClientInterface $client, EventDispatcherInterface $dispatcher, AdapterInterface $cache, LoggerInterface $logger = null)
     {
         $this->client = $client;
         $this->dispatcher = $dispatcher;
@@ -327,8 +327,8 @@ final class Sistema
             $cookies = $userCredentials['cookies'];
 
             foreach ($cookies as $cookie) {
-                $this->client->getConfig('cookies')
-                    ->setCookie(SetCookie::fromString($cookie));
+                // $this->client->getConfig('cookies')
+                    // ->setCookie(SetCookie::fromString($cookie));
             }
 
             return;
@@ -348,7 +348,8 @@ final class Sistema
             $user,
             $this->instance,
             $loginPageCrawler->getSalt(),
-            $loginPageCrawler->getProtected()
+            $loginPageCrawler->getProtected(),
+            $loginPageCrawler->getCookieJar()
         );
 
         // Lendo os cookies no client

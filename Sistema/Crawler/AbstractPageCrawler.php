@@ -2,10 +2,12 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Crawler;
 
-use GuzzleHttp\ClientInterface;
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
+use Symfony\Component\BrowserKit\CookieJar as BrowserKitCookieJar;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Form;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -13,9 +15,14 @@ use Symfony\Component\DomCrawler\Form;
 abstract class AbstractPageCrawler
 {
     /**
-     * @var ClientInterface
+     * @var HttpClientInterface
      */
     protected $client;
+
+    /**
+     * @var BrowserKitCookieJar
+     */
+    protected $cookieJar;
 
     /**
      * @var string
@@ -45,12 +52,12 @@ abstract class AbstractPageCrawler
     /**
      * Construtor.
      *
-     * @param ClientInterface  $client
-     * @param string           $instance            p_instance.
-     * @param AdapterInterface $cache
-     * @param string           $cacheKey
+     * @param HttpClientInterface $client
+     * @param string              $instance p_instance.
+     * @param AdapterInterface    $cache
+     * @param string              $cacheKey
      */
-    public function __construct(ClientInterface $client, string $instance, AdapterInterface $cache, string $cacheKey)
+    public function __construct(HttpClientInterface $client, string $instance, AdapterInterface $cache, string $cacheKey)
     {
         $this->client = $client;
         $this->instance = $instance;
@@ -83,22 +90,41 @@ abstract class AbstractPageCrawler
      */
     public function crawl(): self
     {
-        $pageContentsCacheItem = $this->cache->getItem($this->cacheKey);
-
-        if ($pageContentsCacheItem->isHit()) {
-            $this->contents = $pageContentsCacheItem->get();
+        $pageCacheItem = $this->cache->getItem($this->cacheKey);
+        if ($pageCacheItem->isHit()) {
+            $page = $pageCacheItem->get();
+            $this->contents = $page['contents'];
+            $this->cookieJar = $page['cookie_jar'];
 
             return $this;
         }
 
         $uri = $this->getUri($this->instance);
-        $response = $this->client->get($uri);
-        $this->contents = $response->getBody()->getContents();
+        $response = $this->client->request('GET', $uri);
 
-        $pageContentsCacheItem->set($this->contents);
-        $this->cache->save($pageContentsCacheItem);
+        $this->contents = $response->getContent();
+
+        $cookieJar = new BrowserKitCookieJar();
+        $headers = $response->getHeaders();
+        if (isset($headers['set-cookie'])) {
+            foreach ($headers['set-cookie'] as $cookieStr) {
+                $cookieJar->set(BrowserKitCookie::fromString($cookieStr, $uri));
+            }
+        }
+
+        $pageCacheItem->set([
+            'contents' => $this->contents,
+            'cookie_jar' => $cookieJar,
+        ]);
+
+        $this->cache->save($pageCacheItem);
 
         return $this;
+    }
+
+    public function getCookieJar(): BrowserKitCookieJar
+    {
+        return $this->cookieJar;
     }
 
     /**
@@ -174,7 +200,7 @@ abstract class AbstractPageCrawler
             $this->crawl();
         }
 
-        $uri = sprintf('%s%s', $this->client->getConfig('base_uri'), $this->getUri());
+        $uri = sprintf('%s%s', 'http://sistema.datainfo.inf.br', $this->getUri());
 
         return new Crawler($this->contents, $uri);
     }
