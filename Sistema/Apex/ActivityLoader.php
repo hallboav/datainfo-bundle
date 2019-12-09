@@ -35,6 +35,7 @@ class ActivityLoader
      * @param string  $ajaxId
      * @param string  $salt
      * @param string  $protected
+     * @param string  $parsedOraWwvApp104Cookie
      *
      * @return ActivityCollection
      *
@@ -42,7 +43,7 @@ class ActivityLoader
      * @throws \UnexpectedValueException Quando a resposta do Service é insuficiente para ler as atividades.
      * @throws \UnexpectedValueException Quando a resposta do Service é insuficiente para ler a atividade.
      */
-    public function load(Project $project, string $instance, string $ajaxId, string $salt, string $protected): ActivityCollection
+    public function load(Project $project, string $instance, string $ajaxId, string $salt, string $protected, string $parsedOraWwvApp104Cookie): ActivityCollection
     {
         $parameters = [
             'p_flow_id' => '104',
@@ -61,7 +62,12 @@ class ActivityLoader
             ]),
         ];
 
+        $headers = [
+            'Cookie' => $parsedOraWwvApp104Cookie,
+        ];
+
         $response = $this->client->request('POST', '/apex/wwv_flow.ajax', [
+            'headers' => $headers,
             'body' => $parameters,
         ]);
 

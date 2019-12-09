@@ -36,6 +36,7 @@ class BalanceChecker
      * @param string             $ajaxId    ajaxIdentifier.
      * @param string             $salt
      * @param string             $protected
+     * @param string             $parsedOraWwvApp104Cookie
      *
      * @return Balance|null Instância de Balance contendo as horas trabalhadas e horas a trabalhar ou
      *                      nulo quando não há nenhum lançamento de realizado no período informado.
@@ -43,7 +44,7 @@ class BalanceChecker
      * @throws \UnexpectedValueException Quando a resposta não está no tipo application/json.
      * @throws \UnexpectedValueException Quando a resposta do Service não traz os valores esperados.
      */
-    public function check(\DateTimeInterface $startDate, \DateTimeInterface $endDate, string $instance, string $ajaxId, string $salt, string $protected): ?Balance
+    public function check(\DateTimeInterface $startDate, \DateTimeInterface $endDate, string $instance, string $ajaxId, string $salt, string $protected, string $parsedOraWwvApp104Cookie): ?Balance
     {
         $parameters = [
             'p_flow_id' => '104',
@@ -64,7 +65,12 @@ class BalanceChecker
             ]),
         ];
 
+        $headers = [
+            'Cookie' => $parsedOraWwvApp104Cookie,
+        ];
+
         $response = $this->client->request('POST', '/apex/wwv_flow.ajax', [
+            'headers' => $headers,
             'body' => $parameters,
         ]);
 

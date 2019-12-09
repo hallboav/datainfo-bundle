@@ -2,7 +2,7 @@
 
 namespace Hallboav\DatainfoBundle\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use Symfony\Contracts\EventDispatcher\Event;
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
 
 /**

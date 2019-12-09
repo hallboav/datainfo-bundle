@@ -40,12 +40,13 @@ class WidgetReporter
      * @param string                $ajaxId
      * @param string                $salt
      * @param string                $protected
+     * @param string                $parsedOraWwvApp104Cookie
      *
      * @return array Informações obtidas através da análise da resposta recebida.
      *
      * @throws \UnexpectedValueException Quando não é possível ler corretamente o conteúdo do elemento que possui a classe .apex_report_break.
      */
-    public function report(DatainfoUserInterface $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, FilteringEffortType $effort, string $instance, string $ajaxId, string $salt, string $protected): array
+    public function report(DatainfoUserInterface $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, FilteringEffortType $effort, string $instance, string $ajaxId, string $salt, string $protected, string $parsedOraWwvApp104Cookie): array
     {
         $parameters = [
             'p_flow_id' => '104',
@@ -71,7 +72,12 @@ class WidgetReporter
             ]),
         ];
 
+        $headers = [
+            'Cookie' => $parsedOraWwvApp104Cookie,
+        ];
+
         $response = $this->client->request('POST', '/apex/wwv_flow.ajax', [
+            'headers' => $headers,
             'body' => $parameters,
         ]);
 

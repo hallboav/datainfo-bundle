@@ -30,23 +30,23 @@ class QueryPageCrawler extends AbstractPageCrawler
      */
     public function getAjaxIdForBalanceChecking(): string
     {
-        if (null === $this->contents) {
+        if (null === $this->lastResponse) {
             $this->crawl();
         }
 
         $rightRegExp = '\,"attribute01":"\#P10_W_DAT_INICIO';
 
-        return $this->getAjaxId($this->contents, '', $rightRegExp);
+        return $this->getAjaxId($this->lastResponse->getContent(), '', $rightRegExp);
     }
 
     public function getAjaxIdForReporting(): string
     {
-        if (null === $this->contents) {
+        if (null === $this->lastResponse) {
             $this->crawl();
         }
 
         $pattern = '#apex\.widget\.report\.init\("P10_LISTA"\,"(?P<ajax_id>.+)"\,\{"pageItems#';
-        if (!preg_match($pattern, $this->contents, $matches)) {
+        if (!preg_match($pattern, $this->lastResponse->getContent(), $matches)) {
             throw new \LengthException('ajaxIdentifier não encontrado');
         }
 

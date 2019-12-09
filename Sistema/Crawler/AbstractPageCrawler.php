@@ -2,8 +2,8 @@
 
 namespace Hallboav\DatainfoBundle\Sistema\Crawler;
 
-use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Component\BrowserKit\CookieJar as BrowserKitCookieJar;
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Form;
@@ -20,9 +20,9 @@ abstract class AbstractPageCrawler
     protected $client;
 
     /**
-     * @var BrowserKitCookieJar
+     * @var string
      */
-    protected $cookieJar;
+    protected $parsedOraWwvApp104Cookie;
 
     /**
      * @var string
@@ -30,14 +30,9 @@ abstract class AbstractPageCrawler
     protected $instance;
 
     /**
-     * @var AdapterInterface
+     * @var \Symfony\Contracts\HttpClient\ResponseInterface
      */
-    protected $cache;
-
-    /**
-     * @var string
-     */
-    protected $contents;
+    protected $lastResponse;
 
     /**
      * @var Form
@@ -53,16 +48,14 @@ abstract class AbstractPageCrawler
      * Construtor.
      *
      * @param HttpClientInterface $client
-     * @param string              $instance p_instance.
-     * @param AdapterInterface    $cache
-     * @param string              $cacheKey
+     * @param string              $instance                 p_instance.
+     * @param string              $parsedOraWwvApp104Cookie
      */
-    public function __construct(HttpClientInterface $client, string $instance, AdapterInterface $cache, string $cacheKey)
+    public function __construct(HttpClientInterface $client, string $instance, string $parsedOraWwvApp104Cookie = null)
     {
         $this->client = $client;
         $this->instance = $instance;
-        $this->cache = $cache;
-        $this->cacheKey = $cacheKey;
+        $this->parsedOraWwvApp104Cookie = $parsedOraWwvApp104Cookie;
     }
 
     /**
@@ -90,41 +83,43 @@ abstract class AbstractPageCrawler
      */
     public function crawl(): self
     {
-        $pageCacheItem = $this->cache->getItem($this->cacheKey);
-        if ($pageCacheItem->isHit()) {
-            $page = $pageCacheItem->get();
-            $this->contents = $page['contents'];
-            $this->cookieJar = $page['cookie_jar'];
-
-            return $this;
+        $headers = [];
+        if (null !== $this->parsedOraWwvApp104Cookie) {
+            $headers['cookie'] = $this->parsedOraWwvApp104Cookie;
         }
 
         $uri = $this->getUri($this->instance);
-        $response = $this->client->request('GET', $uri);
-
-        $this->contents = $response->getContent();
-
-        $cookieJar = new BrowserKitCookieJar();
-        $headers = $response->getHeaders();
-        if (isset($headers['set-cookie'])) {
-            foreach ($headers['set-cookie'] as $cookieStr) {
-                $cookieJar->set(BrowserKitCookie::fromString($cookieStr, $uri));
-            }
-        }
-
-        $pageCacheItem->set([
-            'contents' => $this->contents,
-            'cookie_jar' => $cookieJar,
+        $this->lastResponse = $this->client->request('GET', $uri, [
+            'headers' => $headers,
         ]);
-
-        $this->cache->save($pageCacheItem);
 
         return $this;
     }
 
-    public function getCookieJar(): BrowserKitCookieJar
+    public function getLastParsedOraWwvApp104Cookie(): ?string
     {
-        return $this->cookieJar;
+        if (null === $this->lastResponse) {
+            throw new \LogicException('O método "crawl" deve ser chamado primeiramente.');
+        }
+
+        $headers = $this->lastResponse->getHeaders();
+        if (!isset($headers['set-cookie'])) {
+            return null;
+        }
+
+        $cookieJar = new BrowserKitCookieJar();
+        foreach ($headers['set-cookie'] as $cookieStr) {
+            $cookie = BrowserKitCookie::fromString($cookieStr);
+            $cookieJar->set($cookie);
+        }
+
+        $oraWwvApp104Cookie = $cookieJar->get('ORA_WWV_APP_104');
+
+        return sprintf(
+            '%s=%s',
+            $oraWwvApp104Cookie->getName(),
+            $oraWwvApp104Cookie->getValue()
+        );
     }
 
     /**
@@ -135,7 +130,7 @@ abstract class AbstractPageCrawler
     public function getSalt(): string
     {
         if (null === $this->crawler) {
-            $this->crawler = $this->getCrawler();
+            $this->crawler = $this->createCrawler();
         }
 
         return $this->crawler->filter('input#pSalt')->attr('value');
@@ -149,7 +144,7 @@ abstract class AbstractPageCrawler
     public function getProtected(): string
     {
         if (null === $this->crawler) {
-            $this->crawler = $this->getCrawler();
+            $this->crawler = $this->createCrawler();
         }
 
         return $this->crawler->filter('input#pPageItemsProtected')->attr('value');
@@ -158,7 +153,7 @@ abstract class AbstractPageCrawler
     /**
      * Obtém o ajaxId.
      *
-     * @param string $contents    String que contém o ajaxIdentifier.
+     * @param string $subject     String que contém o ajaxIdentifier.
      * @param string $leftRegExp  Expressão regular à esquerda da expressão regular do ajaxIdentifier.
      * @param string $rightRegExp Expressão regular à direita da expressão regular do ajaxIdentifier.
      *
@@ -183,7 +178,7 @@ abstract class AbstractPageCrawler
     protected function getForm(): Form
     {
         if (null === $this->crawler) {
-            $this->crawler = $this->getCrawler();
+            $this->crawler = $this->createCrawler();
         }
 
         return $this->crawler->selectButton($this->getFormButtonText())->form();
@@ -194,15 +189,15 @@ abstract class AbstractPageCrawler
      *
      * @return Crawler
      */
-    protected function getCrawler(): Crawler
+    protected function createCrawler(): Crawler
     {
-        if (null === $this->contents) {
+        if (null === $this->lastResponse) {
             $this->crawl();
         }
 
         $uri = sprintf('%s%s', 'http://sistema.datainfo.inf.br', $this->getUri());
 
-        return new Crawler($this->contents, $uri);
+        return new Crawler($this->lastResponse->getContent(), $uri);
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Hallboav\DatainfoBundle\Sistema\Apex;
 
 use Hallboav\DatainfoBundle\Sistema\Security\User\DatainfoUserInterface;
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Component\BrowserKit\CookieJar as BrowserKitCookieJar;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -35,13 +36,13 @@ class Authenticator
      * @param string                $instance  p_instance.
      * @param string                $salt
      * @param string                $protected
-     * @param BrowserKitCookieJar   $cookieJar
+     * @param string                $parsedOraWwvApp104Cookie
      *
-     * @return void
+     * @return string
      *
      * @throws \InvalidArgumentException Quando o usuário e/ou a senha estão incorretos.
      */
-    public function authenticate(DatainfoUserInterface $user, string $instance, string $salt, string $protected, BrowserKitCookieJar $cookieJar): void
+    public function authenticate(DatainfoUserInterface $user, string $instance, string $salt, string $protected, string $parsedOraWwvApp104Cookie): string
     {
         $parameters = [
             'p_flow_id' => '104',
@@ -59,35 +60,44 @@ class Authenticator
             ]),
         ];
 
-        $headers = [];
-
-        $cookies = [];
-        foreach ($cookieJar->allRawValues('') as $name => $value) {
-            $cookies[] = sprintf('%s=%s', $name, $value);
-        }
-
-        if (0 < count($cookies)) {
-            $headers['cookie'] = implode('; ', $cookies);
-        }
+        $requestHeaders = [
+            'Cookie' => $parsedOraWwvApp104Cookie,
+        ];
 
         $response = $this->client->request('POST', '/apex/wwv_flow.accept', [
-            'body' => $parameters,
-            'headers' => $headers,
+            'headers' => $requestHeaders,
             'max_redirects' => 0,
+            'body' => $parameters,
         ]);
 
-        echo 'HEADERS ANTES:', PHP_EOL;
-        var_dump($headers);
-        echo PHP_EOL, '------------', PHP_EOL, PHP_EOL, 'HEADERS DEPOIS:', PHP_EOL;
-        var_dump($response->getHeaders()['set-cookie']);
-        echo PHP_EOL, '------------', PHP_EOL, PHP_EOL, 'CONTENT:', PHP_EOL;
-        var_dump($response->getContent());
-        die;
+        $responseHeaders = $response->getHeaders($throw = false);
+        $cookieJar = new BrowserKitCookieJar();
 
+        foreach ($responseHeaders['set-cookie'] as $cookieStr) {
+            $cookie = BrowserKitCookie::fromString($cookieStr);
+            $cookieJar->set($cookie);
+        }
 
+        $oraWwvApp104CookieUpdated = $cookieJar->get('ORA_WWV_APP_104');
+        $parsedOraWwvApp104CookieUpdated = sprintf(
+            '%s=%s',
+            $oraWwvApp104CookieUpdated->getName(),
+            $oraWwvApp104CookieUpdated->getValue()
+        );
+
+        $requestHeaders = [
+            'Cookie' => $parsedOraWwvApp104CookieUpdated,
+        ];
+
+        $response = $this->client->request('GET', $response->getInfo('redirect_url'), [
+            'headers' => $requestHeaders,
+            'max_redirects' => 0,
+        ]);
 
         if (false === strpos($response->getContent(), 'Sair')) {
             throw new \InvalidArgumentException('Usuário e/ou senha inválido(s)');
         }
+
+        return $parsedOraWwvApp104CookieUpdated;
     }
 }

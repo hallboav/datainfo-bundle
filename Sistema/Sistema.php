@@ -2,9 +2,6 @@
 
 namespace Hallboav\DatainfoBundle\Sistema;
 
-use GuzzleHttp\Client;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use GuzzleHttp\Cookie\SetCookie;
 use Hallboav\DatainfoBundle\Event\AuthenticationEvent;
 use Hallboav\DatainfoBundle\Event\DatainfoEvents;
 use Hallboav\DatainfoBundle\Sistema\Activity\Activity;
@@ -27,6 +24,7 @@ use Hallboav\DatainfoBundle\Sistema\Task\TaskCollection;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * @author Hallison Boaventura <hallisonboaventura@gmail.com>
@@ -83,7 +81,9 @@ final class Sistema
      */
     public function getProjects(DatainfoUserInterface $user): ProjectCollection
     {
-        $this->authenticate($user);
+        $credentials = $this->authenticate($user);
+        $instance = $credentials['p_instance'];
+        $parsedOraWwvApp104Cookie = $credentials['parsed_ora_wwv_app_104_cookie'];
 
         if (null !== $this->logger) {
             $this->logger->info('Buscando projetos no Service.', [
@@ -92,12 +92,7 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.project.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler(
-            $this->client,
-            $this->instance,
-            $this->cache,
-            $cacheKey
-        );
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $instance, $parsedOraWwvApp104Cookie);
 
         return $launcherPageCrawler->getProjects();
     }
@@ -112,7 +107,9 @@ final class Sistema
      */
     public function getActivities(DatainfoUserInterface $user, Project $project): ActivityCollection
     {
-        $this->authenticate($user);
+        $credentials = $this->authenticate($user);
+        $instance = $credentials['p_instance'];
+        $parsedOraWwvApp104Cookie = $credentials['parsed_ora_wwv_app_104_cookie'];
 
         if (null !== $this->logger) {
             $this->logger->info('Buscando atividades do projeto no Service.', [
@@ -122,22 +119,47 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.activity.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler(
-            $this->client,
-            $this->instance,
-            $this->cache,
-            $cacheKey
-        );
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $instance, $parsedOraWwvApp104Cookie);
 
         $activityLoader = new ActivityLoader($this->client);
 
         return $activityLoader->load(
             $project,
-            $this->instance,
+            $instance,
             $launcherPageCrawler->getAjaxIdForActivitiesFetching(),
             $launcherPageCrawler->getSalt(),
-            $launcherPageCrawler->getProtected()
+            $launcherPageCrawler->getProtected(),
+            $parsedOraWwvApp104Cookie
         );
+    }
+
+    public function getQueryPageData(DatainfoUserInterface $user): array
+    {
+        $cacheKey = sprintf('cache.crawler.query_page.%s', $user->getDatainfoUsername());
+        $queryPageCacheItem = $this->cache->getItem($cacheKey);
+
+        if ($queryPageCacheItem->isHit()) {
+            return $queryPageCacheItem->get();
+        }
+
+        $credentials = $this->authenticate($user);
+        $instance = $credentials['p_instance'];
+        $parsedOraWwvApp104Cookie = $credentials['parsed_ora_wwv_app_104_cookie'];
+
+        $queryPageCrawler = new QueryPageCrawler($this->client, $instance, $parsedOraWwvApp104Cookie);
+        $queryPageData = [
+            'p_instance'                    => $instance,
+            'parsed_ora_wwv_app_104_cookie' => $parsedOraWwvApp104Cookie,
+            'ajax_id_for_balance_checking'  => $queryPageCrawler->getAjaxIdForBalanceChecking(),
+            'ajax_id_for_reporting'         => $queryPageCrawler->getAjaxIdForReporting(),
+            'salt'                          => $queryPageCrawler->getSalt(),
+            'protected'                     => $queryPageCrawler->getProtected(),
+        ];
+
+        $queryPageCacheItem->set($queryPageData);
+        $this->cache->save($queryPageCacheItem);
+
+        return $queryPageData;
     }
 
     /**
@@ -151,8 +173,6 @@ final class Sistema
      */
     public function getBalance(DatainfoUserInterface $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate): ?Balance
     {
-        $this->authenticate($user);
-
         if (null !== $this->logger) {
             $this->logger->info('Buscando saldo de horas no Service.', [
                 'datainfo_username' => $user->getDatainfoUsername(),
@@ -161,23 +181,17 @@ final class Sistema
             ]);
         }
 
-        $cacheKey = sprintf('cache.crawler.balance.%s', $user->getDatainfoUsername());
-        $queryPageCrawler = new QueryPageCrawler(
-            $this->client,
-            $this->instance,
-            $this->cache,
-            $cacheKey
-        );
-
+        $queryPageData = $this->getQueryPageData($user);
         $balanceChecker = new BalanceChecker($this->client);
 
         return $balanceChecker->check(
             $startDate,
             $endDate,
-            $this->instance,
-            $queryPageCrawler->getAjaxIdForBalanceChecking(),
-            $queryPageCrawler->getSalt(),
-            $queryPageCrawler->getProtected()
+            $queryPageData['p_instance'],
+            $queryPageData['ajax_id_for_balance_checking'],
+            $queryPageData['salt'],
+            $queryPageData['protected'],
+            $queryPageData['parsed_ora_wwv_app_104_cookie']
         );
     }
 
@@ -193,8 +207,6 @@ final class Sistema
      */
     public function getWidgetReport(DatainfoUserInterface $user, \DateTimeInterface $startDate, \DateTimeInterface $endDate, FilteringEffortType $effortType): array
     {
-        $this->authenticate($user);
-
         if (null !== $this->logger) {
             $this->logger->info('Buscando relatório no Service.', [
                 'datainfo_username' => $user->getDatainfoUsername(),
@@ -204,14 +216,7 @@ final class Sistema
             ]);
         }
 
-        $cacheKey = sprintf('cache.crawler.widget_report.%s', $user->getDatainfoUsername());
-        $queryPageCrawler = new QueryPageCrawler(
-            $this->client,
-            $this->instance,
-            $this->cache,
-            $cacheKey
-        );
-
+        $queryPageData = $this->getQueryPageData($user);
         $widgetReporter = new WidgetReporter($this->client);
 
         return $widgetReporter->report(
@@ -219,10 +224,11 @@ final class Sistema
             $startDate,
             $endDate,
             $effortType,
-            $this->instance,
-            $queryPageCrawler->getAjaxIdForReporting(),
-            $queryPageCrawler->getSalt(),
-            $queryPageCrawler->getProtected()
+            $queryPageData['p_instance'],
+            $queryPageData['ajax_id_for_reporting'],
+            $queryPageData['salt'],
+            $queryPageData['protected'],
+            $queryPageData['parsed_ora_wwv_app_104_cookie']
         );
     }
 
@@ -239,7 +245,9 @@ final class Sistema
      */
     public function launchPerformedTasks(DatainfoUserInterface $user, Activity $activity, TaskCollection $tasks, EffortType $effortType): array
     {
-        $this->authenticate($user);
+        $credentials = $this->authenticate($user);
+        $instance = $credentials['p_instance'];
+        $parsedOraWwvApp104Cookie = $credentials['parsed_ora_wwv_app_104_cookie'];
 
         if (null !== $this->logger) {
             $this->logger->info('Lançando um ou mais registros de pontos no Service.', [
@@ -251,132 +259,72 @@ final class Sistema
         }
 
         $cacheKey = sprintf('cache.crawler.launcher.%s', $user->getDatainfoUsername());
-        $launcherPageCrawler = new LauncherPageCrawler(
-            $this->client,
-            $this->instance,
-            $this->cache,
-            $cacheKey
-        );
+        $launcherPageCrawler = new LauncherPageCrawler($this->client, $instance, $parsedOraWwvApp104Cookie);
 
         $launcher = new Launcher($this->client);
-
-        $messages = [];
-        foreach ($tasks as $task) {
-            $message = $launcher->launch(
-                $user,
-                $task,
-                $activity,
-                $effortType,
-                $this->instance,
-                $launcherPageCrawler->getAjaxIdForLaunching(),
-                $launcherPageCrawler->getSalt(),
-                $launcherPageCrawler->getProtected()
-            );
-
-            $messages[] = [
-                'date' => $task->getDate()->format(\DateTime::ATOM),
-                'start_time' => $task->getStartTime()->format(\DateTime::ATOM),
-                'end_time' => $task->getEndTime()->format(\DateTime::ATOM),
-                'message' => $message,
-            ];
-        }
+        $messages = $launcher->launch(
+            $user,
+            $tasks,
+            $activity,
+            $effortType,
+            $instance,
+            $launcherPageCrawler->getAjaxIdForLaunching(),
+            $launcherPageCrawler->getSalt(),
+            $launcherPageCrawler->getProtected(),
+            $parsedOraWwvApp104Cookie
+        );
 
         return $messages;
     }
-
-    // public function deleteTask(DatainfoUserInterface $user): string
-    // {
-    //     $this->authenticate($user);
-
-    //     $cacheKey = sprintf('cache.crawler.task_delete.%s', $user->getDatainfoUsername());
-    //     $launcherPageCrawler = new LauncherPageCrawler(
-    //         $this->client,
-    //         $this->instance,
-    //         $this->cache,
-    //         $cacheKey
-    //     );
-
-    //     $taskDeleter = new TaskDeleter($this->client);
-
-    //     return $taskDeleter->deleteTask(
-    //         $user,
-    //         $task,
-    //         $performedTaskId,
-    //         $this->instance,
-    //         $launcherPageCrawler->getAjaxIdForTaskDeleting(),
-    //         $launcherPageCrawler->getSalt(),
-    //         $launcherPageCrawler->getProtected()
-    //     );
-    // }
 
     /**
      * Autentica o usuário.
      *
      * @param DatainfoUserInterface $user
      *
-     * @return void
+     * @return array
      */
-    protected function authenticate(DatainfoUserInterface $user): void
+    protected function authenticate(DatainfoUserInterface $user): array
     {
         $cacheKey = sprintf('cache.credentials.%s', $user->getDatainfoUsername());
-        $userCredentialsCacheItem = $this->cache->getItem($cacheKey);
-
-        if ($userCredentialsCacheItem->isHit()) {
-            $userCredentials = $userCredentialsCacheItem->get();
-            $this->instance = $userCredentials['instance'];
-            $cookies = $userCredentials['cookies'];
-
-            foreach ($cookies as $cookie) {
-                // $this->client->getConfig('cookies')
-                    // ->setCookie(SetCookie::fromString($cookie));
-            }
-
-            return;
+        $credentialsCacheItem = $this->cache->getItem($cacheKey);
+        if ($credentialsCacheItem->isHit()) {
+            return $credentialsCacheItem->get();
         }
 
-        $cacheKey = sprintf('cache.crawler.login.%s', $user->getDatainfoUsername());
-        $loginPageCrawler = new LoginPageCrawler(
-            $this->client,
-            '',
-            $this->cache,
-            $cacheKey
-        );
-        $this->instance = $loginPageCrawler->getInstance();
+        $loginPageCrawler = new LoginPageCrawler($this->client, 'not_used');
+        $instance = $loginPageCrawler->getInstance();
+        $parsedOraWwvApp104Cookie = $loginPageCrawler->getLastParsedOraWwvApp104Cookie();
 
         $authenticator = new Authenticator($this->client);
-        $authenticator->authenticate(
+        $parsedOraWwvApp104CookieUpdated = $authenticator->authenticate(
             $user,
-            $this->instance,
+            $instance,
             $loginPageCrawler->getSalt(),
             $loginPageCrawler->getProtected(),
-            $loginPageCrawler->getCookieJar()
+            $parsedOraWwvApp104Cookie,
         );
 
-        // Lendo os cookies no client
-        $jar = $this->client->getConfig('cookies');
-        $cookies = [
-            'LOGIN_USERNAME_COOKIE' => (string) $jar->getCookieByName('LOGIN_USERNAME_COOKIE'),
-            'ORA_WWV_APP_104' => (string) $jar->getCookieByName('ORA_WWV_APP_104'),
+        $credentials = [
+            'p_instance' => $instance,
+            'parsed_ora_wwv_app_104_cookie' => $parsedOraWwvApp104CookieUpdated,
         ];
 
-        $userCredentialsCacheItem->set([
-            'instance' => $this->instance,
-            'cookies' => $cookies,
-        ]);
-
         // Salvando os cookies no cache
-        $this->cache->save($userCredentialsCacheItem);
+        $credentialsCacheItem->set($credentials);
+        $this->cache->save($credentialsCacheItem);
 
         // Disparando evento de autenticação
         $event = new AuthenticationEvent($user);
-        $this->dispatcher->dispatch(DatainfoEvents::AUTHENTICATION_SUCCESS, $event);
+        $this->dispatcher->dispatch($event, DatainfoEvents::AUTHENTICATION_SUCCESS);
 
-        // Logging
         if (null !== $this->logger) {
             $this->logger->info('Usuário autenticado no Service.', [
                 'datainfo_username' => $user->getDatainfoUsername(),
             ]);
         }
+
+        return $credentials;
     }
 
     /**
@@ -389,18 +337,42 @@ final class Sistema
     public function invalidateUserCache(DatainfoUserInterface $user): void
     {
         $items = [
-            sprintf('cache.crawler.project.%s', $user->getDatainfoUsername()),
             sprintf('cache.crawler.activity.%s', $user->getDatainfoUsername()),
-            sprintf('cache.crawler.balance.%s', $user->getDatainfoUsername()),
-            sprintf('cache.crawler.widget_report.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.query_page.%s', $user->getDatainfoUsername()),
             sprintf('cache.crawler.launcher.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.project.%s', $user->getDatainfoUsername()),
             // sprintf('cache.crawler.task_delete.%s', $user->getDatainfoUsername()),
+            sprintf('cache.crawler.widget_report.%s', $user->getDatainfoUsername()),
             sprintf('cache.credentials.%s', $user->getDatainfoUsername()),
-            sprintf('cache.crawler.login.%s', $user->getDatainfoUsername()),
         ];
 
         foreach ($items as $item) {
             $this->cache->deleteItem($item);
         }
     }
+
+    // public function deleteTask(DatainfoUserInterface $user): string
+    // {
+    //     $this->authenticate($user);
+
+    //     $cacheKey = sprintf('cache.crawler.task_delete.%s', $user->getDatainfoUsername());
+    //     $launcherPageCrawler = new LauncherPageCrawler(
+    //         $this->client,
+    //         $instance,
+    //         $this->cache,
+    //         $cacheKey
+    //     );
+
+    //     $taskDeleter = new TaskDeleter($this->client);
+
+    //     return $taskDeleter->deleteTask(
+    //         $user,
+    //         $task,
+    //         $performedTaskId,
+    //         $instance,
+    //         $launcherPageCrawler->getAjaxIdForTaskDeleting(),
+    //         $launcherPageCrawler->getSalt(),
+    //         $launcherPageCrawler->getProtected()
+    //     );
+    // }
 }

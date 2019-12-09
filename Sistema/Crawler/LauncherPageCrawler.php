@@ -34,13 +34,13 @@ class LauncherPageCrawler extends AbstractPageCrawler
      */
     public function getAjaxIdForActivitiesFetching(): string
     {
-        if (null === $this->contents) {
+        if (null === $this->lastResponse) {
             $this->crawl();
         }
 
         $leftRegExp = '\#P100_SEQ_ESFORCO"\,';
 
-        return $this->getAjaxId($this->contents, $leftRegExp, '');
+        return $this->getAjaxId($this->lastResponse->getContent(), $leftRegExp, '');
     }
 
     /**
@@ -50,13 +50,13 @@ class LauncherPageCrawler extends AbstractPageCrawler
      */
     public function getAjaxIdForLaunching(): string
     {
-        if (null === $this->contents) {
+        if (null === $this->lastResponse) {
             $this->crawl();
         }
 
         $rightRegExp = '\,"attribute01":".*P100_DATAESFORCO\,\#P100_DESCRICAO';
 
-        return $this->getAjaxId($this->contents, '', $rightRegExp);
+        return $this->getAjaxId($this->lastResponse->getContent(), '', $rightRegExp);
     }
 
     /**
@@ -76,13 +76,13 @@ class LauncherPageCrawler extends AbstractPageCrawler
      */
     public function getProjects(): ProjectCollection
     {
-        if (null === $this->contents) {
+        if (null === $this->lastResponse) {
             $this->crawl();
         }
 
         $projects = new ProjectCollection();
 
-        $crawler = new Crawler($this->contents);
+        $crawler = new Crawler($this->lastResponse->getContent());
         $crawler->filter('#P100_PROJETOUSUARIO option:not([value=""])')->each(function (Crawler $option) use ($projects) {
             $projects->add(new Project($option->attr('value'), $option->text()));
         });
